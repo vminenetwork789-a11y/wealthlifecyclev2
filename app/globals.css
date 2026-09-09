@@ -1,6 +1,8 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @layer base {
   *, *::before, *::after {
     box-sizing: border-box;
@@ -44,18 +46,55 @@
   }
 }
 
-/* Global High-Contrast & Sharp Readability Enhancements */
-html:not(.light) .text-slate-400 {
+/* Global High-Contrast & Sharp Readability Enhancements for Dark Mode */
+html:not(.light) .text-slate-400,
+html.dark .text-slate-400 {
   color: #cbd5e1;
 }
 
-html:not(.light) .text-slate-500 {
-  color: #94a3b8;
+html:not(.light) .text-slate-500,
+html.dark .text-slate-500 {
+  color: #cbd5e1;
 }
 
-html:not(.light) .text-slate-600 {
-  color: #94a3b8;
+html:not(.light) .text-slate-600,
+html.dark .text-slate-600 {
+  color: #cbd5e1;
 }
+
+/* Elevate dark-mode contrast for any remaining dark slate text on dark backgrounds,
+   while preserving intentional dark text on bright buttons/chips */
+html:not(.light) .text-slate-700:not([class*="bg-amber-400"] *):not([class*="bg-sky-400"] *):not([class*="bg-emerald-400"] *):not([class*="bg-yellow-400"] *):not([class*="bg-teal-400"] *):not([class*="bg-amber-500"] *):not([class*="bg-sky-500"] *):not([class*="bg-emerald-500"] *):not([class*="bg-white"] *),
+html.dark .text-slate-700:not([class*="bg-amber-400"] *):not([class*="bg-sky-400"] *):not([class*="bg-emerald-400"] *):not([class*="bg-yellow-400"] *):not([class*="bg-teal-400"] *):not([class*="bg-amber-500"] *):not([class*="bg-sky-500"] *):not([class*="bg-emerald-500"] *):not([class*="bg-white"] *) {
+  color: #e2e8f0;
+}
+
+html:not(.light) .text-slate-800:not([class*="bg-amber-400"] *):not([class*="bg-sky-400"] *):not([class*="bg-emerald-400"] *):not([class*="bg-yellow-400"] *):not([class*="bg-teal-400"] *):not([class*="bg-amber-500"] *):not([class*="bg-sky-500"] *):not([class*="bg-emerald-500"] *):not([class*="bg-white"] *),
+html.dark .text-slate-800:not([class*="bg-amber-400"] *):not([class*="bg-sky-400"] *):not([class*="bg-emerald-400"] *):not([class*="bg-yellow-400"] *):not([class*="bg-teal-400"] *):not([class*="bg-amber-500"] *):not([class*="bg-sky-500"] *):not([class*="bg-emerald-500"] *):not([class*="bg-white"] *) {
+  color: #f1f5f9;
+}
+
+html:not(.light) .text-slate-900:not([class*="bg-amber-400"] *):not([class*="bg-sky-400"] *):not([class*="bg-emerald-400"] *):not([class*="bg-yellow-400"] *):not([class*="bg-teal-400"] *):not([class*="bg-amber-500"] *):not([class*="bg-sky-500"] *):not([class*="bg-emerald-500"] *):not([class*="bg-white"] *),
+html.dark .text-slate-900:not([class*="bg-amber-400"] *):not([class*="bg-sky-400"] *):not([class*="bg-emerald-400"] *):not([class*="bg-yellow-400"] *):not([class*="bg-teal-400"] *):not([class*="bg-amber-500"] *):not([class*="bg-sky-500"] *):not([class*="bg-emerald-500"] *):not([class*="bg-white"] *) {
+  color: #f8fafc;
+}
+
+/* Ensure deep tone accents have high luminescence in dark mode */
+html:not(.light) .text-sky-700, html.dark .text-sky-700 { color: #7dd3fc; }
+html:not(.light) .text-sky-800, html.dark .text-sky-800 { color: #bae6fd; }
+html:not(.light) .text-sky-900, html.dark .text-sky-900 { color: #e0f2fe; }
+html:not(.light) .text-emerald-700, html.dark .text-emerald-700 { color: #6ee7b7; }
+html:not(.light) .text-emerald-800, html.dark .text-emerald-800 { color: #a7f3d0; }
+html:not(.light) .text-emerald-900, html.dark .text-emerald-900 { color: #d1fae5; }
+html:not(.light) .text-amber-700, html.dark .text-amber-700 { color: #fcd34d; }
+html:not(.light) .text-amber-800, html.dark .text-amber-800 { color: #fde68a; }
+html:not(.light) .text-amber-900, html.dark .text-amber-900 { color: #fef3c7; }
+html:not(.light) .text-rose-700, html.dark .text-rose-700 { color: #fda4af; }
+html:not(.light) .text-rose-800, html.dark .text-rose-800 { color: #fecdd3; }
+html:not(.light) .text-rose-900, html.dark .text-rose-900 { color: #ffe4e6; }
+html:not(.light) .text-purple-700, html.dark .text-purple-700 { color: #d8b4fe; }
+html:not(.light) .text-purple-800, html.dark .text-purple-800 { color: #e9d5ff; }
+html:not(.light) .text-purple-900, html.dark .text-purple-900 { color: #f3e8ff; }
 
 /* Ensure tiny labels and badges are crisp, readable and legible */
 .text-\[9px\] {

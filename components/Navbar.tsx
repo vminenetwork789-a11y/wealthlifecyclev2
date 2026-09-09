@@ -129,7 +129,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenConnectModal }) => {
             </div>
             {/* ซ่อนชื่อบนมือถือตามความต้องการของผู้ใช้ เพื่อประหยัดพื้นที่ */}
             <div className="hidden sm:block">
-              <h1 className="text-sm sm:text-base font-bold tracking-tight text-white uppercase flex items-center gap-1.5 font-mono leading-none">
+              <h1 className={`text-sm sm:text-base font-bold tracking-tight uppercase flex items-center gap-1.5 font-mono leading-none ${theme === 'light' ? 'text-slate-900' : 'text-white'}`}>
                 wealth<span className="text-sky-400">lifecycle</span>
                 <span className="hidden xl:inline-flex items-center px-1.5 py-0.5 text-[9px] font-bold rounded bg-purple-950/80 border border-purple-500/30 text-purple-300">
                   👻 GHOST

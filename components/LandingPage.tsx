@@ -572,7 +572,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenConnectModal }) 
                   <Sparkles className="w-3 h-3" />
                   {lang === 'th' ? 'สมัครสมาชิกเข้าร่วมผังทันที' : 'Instant Registration'}
                 </div>
-                <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">
+                <h2 className={`text-lg sm:text-xl font-bold ${theme === 'light' ? 'text-slate-900' : 'text-white'}`}>
                   {lang === 'th' ? 'สมัครสมาชิกร่วมโครงข่าย wealthlifecycle' : 'Join wealthlifecycle Network'}
                 </h2>
               </div>
@@ -583,9 +583,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenConnectModal }) 
                 ? 'bg-slate-50 border-slate-200'
                 : 'bg-slate-950/80 border-slate-800'
             }`}>
-              <span className="text-slate-500 dark:text-slate-400">{lang === 'th' ? 'ค่าธรรมเนียม' : 'Registration Fee'}:</span>
-              <span className="font-bold text-emerald-600 dark:text-emerald-400 text-xs sm:text-sm font-mono">2.0 USDT</span>
-              <span className="text-[10px] text-slate-500 font-mono">BEP-20</span>
+              <span className={theme === 'light' ? 'text-slate-500' : 'text-slate-300'}>{lang === 'th' ? 'ค่าธรรมเนียม' : 'Registration Fee'}:</span>
+              <span className={`font-bold text-xs sm:text-sm font-mono ${theme === 'light' ? 'text-emerald-600' : 'text-emerald-400'}`}>2.0 USDT</span>
+              <span className={`text-[10px] font-mono ${theme === 'light' ? 'text-slate-500' : 'text-slate-400'}`}>BEP-20</span>
             </div>
           </div>
 
@@ -809,10 +809,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenConnectModal }) 
                       <div className="flex items-start gap-2">
                         <Zap className="w-4 h-4 text-sky-500 shrink-0 mt-0.5" />
                         <div>
-                          <p className="font-bold text-[11px] text-sky-700 dark:text-sky-300 flex items-center gap-1">
+                          <p className={`font-bold text-[11px] flex items-center gap-1 ${theme === 'light' ? 'text-sky-700' : 'text-sky-300'}`}>
                             <span>{lang === 'th' ? '⚡ โหมด Auto Placement (ค่า 0)' : '⚡ Auto Placement Mode (0)'}</span>
                           </p>
-                          <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5 leading-relaxed">
+                          <p className={`text-[11px] mt-0.5 leading-relaxed ${theme === 'light' ? 'text-slate-600' : 'text-slate-300'}`}>
                             {lang === 'th' 
                               ? `สัญญาอัจฉริยะจะจัดวางสายงานให้อัตโนมัติ (Spillover) หรือกดปุ่ม "ค้นหาอัตโนมัติ" เพื่อค้นหาจุดว่างในทีมผู้แนะนำ #${sponsorInput}` 
                               : `Contract places automatically (Spillover), or click "Auto-Find" to target the best open node under #${sponsorInput}`}
@@ -823,7 +823,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenConnectModal }) 
                         type="button"
                         onClick={() => handleAutoSearchPlacement()}
                         disabled={isSearchingPlacement}
-                        className="shrink-0 text-[11px] font-bold text-sky-600 dark:text-sky-400 hover:underline flex items-center gap-0.5 mt-0.5"
+                        className={`shrink-0 text-[11px] font-bold hover:underline flex items-center gap-0.5 mt-0.5 ${
+                          theme === 'light' ? 'text-sky-600' : 'text-sky-300'
+                        }`}
                       >
                         <span>{lang === 'th' ? 'ค้นหาเลย' : 'Find Now'}</span>
                         <ChevronRight className="w-3 h-3" />
@@ -841,7 +843,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenConnectModal }) 
                       <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-1 flex-wrap">
-                          <p className="font-bold text-[11px] text-emerald-700 dark:text-emerald-300">
+                          <p className={`font-bold text-[11px] ${theme === 'light' ? 'text-emerald-800' : 'text-emerald-300'}`}>
                             {lang === 'th' 
                               ? `✨ ค้นพบตำแหน่งที่ดีที่สุด: รหัส #${placementSearchResult.parentId}` 
                               : `✨ Optimal Placement Found: ID #${placementSearchResult.parentId}`}
@@ -856,7 +858,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenConnectModal }) 
                               : `${placementSearchResult.availableSlots}/4 Slots Open`}
                           </span>
                         </div>
-                        <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5 leading-relaxed">
+                        <p className={`text-[11px] mt-0.5 leading-relaxed ${theme === 'light' ? 'text-slate-600' : 'text-slate-300'}`}>
                           {lang === 'th' ? placementSearchResult.messageTh : placementSearchResult.messageEn}
                         </p>
                       </div>
@@ -867,7 +869,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenConnectModal }) 
                   {parentInput !== '0' && parentValidation && (!placementSearchResult || parentInput !== placementSearchResult.parentId.toString()) && (
                     <div className="pt-0.5">
                       {parentValidation.isValidating ? (
-                        <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
+                        <div className={`flex items-center gap-1.5 text-[11px] ${theme === 'light' ? 'text-slate-500' : 'text-slate-300'}`}>
                           <Loader2 className="w-3 h-3 animate-spin text-sky-500" />
                           <span>{lang === 'th' ? `กำลังตรวจสอบรหัส #${parentInput} บนบล็อกเชน...` : `Validating Parent #${parentInput}...`}</span>
                         </div>
@@ -903,7 +905,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenConnectModal }) 
                           <button
                             type="button"
                             onClick={() => handleAutoSearchPlacement(parseInt(parentInput, 10))}
-                            className="text-[11px] font-bold text-amber-600 dark:text-amber-400 hover:underline shrink-0"
+                            className={`text-[11px] font-bold hover:underline shrink-0 ${
+                              theme === 'light' ? 'text-amber-700' : 'text-amber-300'
+                            }`}
                           >
                             {lang === 'th' ? 'หาจุดว่างใต้รหัสนี้' : 'Find under this node'}
                           </button>
@@ -925,7 +929,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenConnectModal }) 
                           <button
                             type="button"
                             onClick={() => handleAutoSearchPlacement()}
-                            className="text-[11px] font-bold text-rose-600 dark:text-rose-400 hover:underline shrink-0"
+                            className={`text-[11px] font-bold hover:underline shrink-0 ${
+                              theme === 'light' ? 'text-rose-700' : 'text-rose-300'
+                            }`}
                           >
                             {lang === 'th' ? 'ค้นหาอัตโนมัติ' : 'Auto-Find'}
                           </button>
@@ -947,7 +953,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenConnectModal }) 
                           <button
                             type="button"
                             onClick={() => handleAutoSearchPlacement()}
-                            className="text-[11px] font-bold text-rose-600 dark:text-rose-400 hover:underline shrink-0"
+                            className={`text-[11px] font-bold hover:underline shrink-0 ${
+                              theme === 'light' ? 'text-rose-700' : 'text-rose-300'
+                            }`}
                           >
                             {lang === 'th' ? 'ค้นหาอัตโนมัติ' : 'Auto-Find'}
                           </button>
@@ -1682,7 +1690,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenConnectModal }) 
 
                           <div className="min-w-0">
                             <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="font-bold text-xs text-slate-900 dark:text-white">
+                              <span className={`font-bold text-xs ${theme === 'light' ? 'text-slate-900' : 'text-white'}`}>
                                 {lang === 'th' ? `รหัสสมาชิก #${c.id}` : `Member #${c.id}`}
                               </span>
                               {isDirect && (
@@ -1691,7 +1699,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenConnectModal }) 
                                 </span>
                               )}
                               <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded ${
-                                theme === 'light' ? 'bg-slate-100 text-slate-600' : 'bg-slate-900 text-slate-400'
+                                theme === 'light' ? 'bg-slate-100 text-slate-600' : 'bg-slate-900 text-slate-300'
                               }`}>
                                 Level {c.level}
                               </span>
@@ -1699,13 +1707,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenConnectModal }) 
 
                             <div className="flex items-center gap-2 mt-1 text-[11px]">
                               <span className={`font-medium ${
-                                c.downlineCount === 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-sky-600 dark:text-sky-400'
+                                c.downlineCount === 0 
+                                  ? (theme === 'light' ? 'text-emerald-700' : 'text-emerald-300')
+                                  : (theme === 'light' ? 'text-sky-700' : 'text-sky-300')
                               }`}>
                                 {c.downlineCount === 0 
                                   ? (lang === 'th' ? '🟢 ว่าง 4 ช่อง (100% ว่าง)' : '🟢 4 Slots Open (Full Open)') 
                                   : (lang === 'th' ? `🟡 มีแล้ว ${c.downlineCount}/4 คน (ว่างอีก ${4 - c.downlineCount} ช่อง)` : `🟡 ${c.downlineCount}/4 Filled (${4 - c.downlineCount} Open Slots)`)}
                               </span>
-                              <span className="text-slate-400 font-mono text-[10px]">
+                              <span className={`font-mono text-[10px] ${theme === 'light' ? 'text-slate-500' : 'text-slate-400'}`}>
                                 {c.wallet.slice(0, 6)}...{c.wallet.slice(-4)}
                               </span>
                             </div>
