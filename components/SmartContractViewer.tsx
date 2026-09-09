@@ -1920,8 +1920,8 @@ export const SmartContractViewer: React.FC = () => {
               </div>
               <p className="text-xs text-slate-400 mb-3">
                 {lang === 'th'
-                  ? 'ตรวจสอบความถูกต้องของ Parent ID (Active, ยังไม่หมดอายุ, และมี Downline < 2 ในผัง Binary)'
-                  : 'Validates parent node: checks active status, expiration, and ensures downline count < 2.'}
+                  ? 'ตรวจสอบความถูกต้องของ Parent ID (Active, ยังไม่หมดอายุ, และมี Downline < 4 ในผังสายงาน)'
+                  : 'Validates parent node: checks active status, expiration, and ensures downline count < 4.'}
               </p>
 
               <form onSubmit={handleQueryParentValid} className="flex gap-2">
@@ -1971,7 +1971,7 @@ export const SmartContractViewer: React.FC = () => {
                     <div className="bg-slate-950 p-2 rounded-lg border border-slate-800">
                       <span className="text-slate-500 block text-[10px]">Downlines:</span>
                       <span className="text-violet-300 font-bold">
-                        {parentValidResult.downlineCount}/2
+                        {parentValidResult.downlineCount}/4
                       </span>
                     </div>
                   </div>

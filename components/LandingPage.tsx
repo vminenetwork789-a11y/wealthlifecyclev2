@@ -847,13 +847,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenConnectModal }) 
                               : `✨ Optimal Placement Found: ID #${placementSearchResult.parentId}`}
                           </p>
                           <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-full border ${
-                            placementSearchResult.availableSlots === 2
+                            placementSearchResult.availableSlots === 4
                               ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border-emerald-500/30'
                               : 'bg-sky-500/20 text-sky-600 dark:text-sky-300 border-sky-500/30'
                           }`}>
                             {lang === 'th' 
-                              ? `ว่าง ${placementSearchResult.availableSlots}/2 ช่อง` 
-                              : `${placementSearchResult.availableSlots}/2 Slots Open`}
+                              ? `ว่าง ${placementSearchResult.availableSlots}/4 ช่อง` 
+                              : `${placementSearchResult.availableSlots}/4 Slots Open`}
                           </span>
                         </div>
                         <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5 leading-relaxed">
@@ -881,12 +881,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenConnectModal }) 
                             <CheckCircle className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                             <span>
                               {lang === 'th' 
-                                ? `✓ รหัส #${parentInput} พร้อมรับสายงาน (มีลูกทีม ${parentValidation.downlineCount}/2 ช่อง — ยังว่างอีก ${2 - parentValidation.downlineCount} ช่อง)` 
-                                : `✓ ID #${parentInput} can accept placement (${parentValidation.downlineCount}/2 filled — ${2 - parentValidation.downlineCount} open)`}
+                                ? `✓ รหัส #${parentInput} พร้อมรับสายงาน (มีลูกทีม ${parentValidation.downlineCount}/4 ช่อง — ยังว่างอีก ${4 - parentValidation.downlineCount} ช่อง)` 
+                                : `✓ ID #${parentInput} can accept placement (${parentValidation.downlineCount}/4 filled — ${4 - parentValidation.downlineCount} open)`}
                             </span>
                           </div>
                         </div>
-                      ) : parentValidation.downlineCount >= 2 ? (
+                      ) : parentValidation.downlineCount >= 4 ? (
                         <div className={`p-2 rounded-xl border flex items-center justify-between gap-2 text-xs ${
                           theme === 'light'
                             ? 'bg-amber-50 border-amber-300 text-amber-950'
@@ -896,8 +896,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenConnectModal }) 
                             <AlertCircle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                             <span>
                               {lang === 'th' 
-                                ? `⚠️ รหัส #${parentInput} มีสายงานเต็มแล้ว (${parentValidation.downlineCount}/2) ไม่สามารถต่อตรงได้` 
-                                : `⚠️ ID #${parentInput} is full (${parentValidation.downlineCount}/2) and cannot take direct downlines`}
+                                ? `⚠️ รหัส #${parentInput} มีสายงานเต็มแล้ว (${parentValidation.downlineCount}/4) ไม่สามารถต่อตรงได้` 
+                                : `⚠️ ID #${parentInput} is full (${parentValidation.downlineCount}/4) and cannot take direct downlines`}
                             </span>
                           </div>
                           <button
@@ -1608,7 +1608,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenConnectModal }) 
             }`}>
               <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
                 <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                <span>{lang === 'th' ? 'แสดงรหัสที่ยังมีช่องว่าง (< 2 คน)' : 'Showing nodes with open slots (< 2)'}</span>
+                <span>{lang === 'th' ? 'แสดงรหัสที่ยังมีช่องว่าง (< 4 คน)' : 'Showing nodes with open slots (< 4)'}</span>
               </div>
               
               <button
@@ -1702,8 +1702,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenConnectModal }) 
                                 c.downlineCount === 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-sky-600 dark:text-sky-400'
                               }`}>
                                 {c.downlineCount === 0 
-                                  ? (lang === 'th' ? '🟢 ว่าง 2 ช่อง (100% ว่าง)' : '🟢 2 Slots Open (Full Open)') 
-                                  : (lang === 'th' ? '🟡 มีแล้ว 1 คน (ว่างอีก 1 ช่อง)' : '🟡 1/2 Filled (1 Open Slot)')}
+                                  ? (lang === 'th' ? '🟢 ว่าง 4 ช่อง (100% ว่าง)' : '🟢 4 Slots Open (Full Open)') 
+                                  : (lang === 'th' ? `🟡 มีแล้ว ${c.downlineCount}/4 คน (ว่างอีก ${4 - c.downlineCount} ช่อง)` : `🟡 ${c.downlineCount}/4 Filled (${4 - c.downlineCount} Open Slots)`)}
                               </span>
                               <span className="text-slate-400 font-mono text-[10px]">
                                 {c.wallet.slice(0, 6)}...{c.wallet.slice(-4)}

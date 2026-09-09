@@ -757,7 +757,7 @@ export class MockMatrixContract {
     const downlineCount = (user.rank1Slots || []).length;
     const isExpired = Boolean(user.isExpired);
     const isActive = !isExpired;
-    const canAcceptDownline = isActive && downlineCount < 2;
+    const canAcceptDownline = isActive && downlineCount < 4;
 
     return {
       isActive,
@@ -769,6 +769,7 @@ export class MockMatrixContract {
   }
 
   // Automatic Parent / Placement ID search: Finds the optimal available node under a sponsor
+  // Uses Breadth-First Search (BFS) in sponsor's team tree to find the shallowest node with < 4 downlines
   public findOptimalPlacement(sponsorId: number = 1): PlacementSearchResult {
     const targetSponsorId = Math.max(1, sponsorId || 1);
     const sponsor = this.getUser(targetSponsorId) || this.getUser(1);
@@ -777,8 +778,8 @@ export class MockMatrixContract {
       return {
         parentId: 1,
         downlineCount: 0,
-        maxSlots: 2,
-        availableSlots: 2,
+        maxSlots: 4,
+        availableSlots: 4,
         isActive: true,
         isExpired: false,
         source: 'root_fallback',
@@ -788,25 +789,25 @@ export class MockMatrixContract {
       };
     }
 
-    // 1. Check if Sponsor itself can accept downlines (< 2 downlines)
+    // 1. Check if Sponsor itself can accept downlines (< 4 downlines)
     const sponsorSlots = (sponsor.rank1Slots || []).length;
-    if (sponsorSlots < 2) {
+    if (sponsorSlots < 4) {
       return {
         parentId: sponsor.id,
         downlineCount: sponsorSlots,
-        maxSlots: 2,
-        availableSlots: Math.max(0, 2 - sponsorSlots),
+        maxSlots: 4,
+        availableSlots: Math.max(0, 4 - sponsorSlots),
         isActive: true,
         isExpired: false,
         wallet: sponsor.address,
         source: 'direct_sponsor',
         levelFromSponsor: 0,
-        messageTh: `ต่อตรงติดตัวผู้แนะนำ #${sponsor.id} ทันที (ว่าง ${2 - sponsorSlots} ช่อง)`,
-        messageEn: `Direct Placement Under Sponsor #${sponsor.id} (${2 - sponsorSlots} open)`,
+        messageTh: `ต่อตรงติดตัวผู้แนะนำ #${sponsor.id} ทันที (ว่าง ${4 - sponsorSlots}/4 ช่อง)`,
+        messageEn: `Direct Placement Under Sponsor #${sponsor.id} (${4 - sponsorSlots}/4 open)`,
       };
     }
 
-    // 2. Breadth-First Search (BFS) to find first available downline node with < 2 slots
+    // 2. Breadth-First Search (BFS) to find first available downline node with < 4 slots
     const queue: { id: number; level: number }[] = (sponsor.rank1Slots || []).map(id => ({ id, level: 1 }));
     const visited = new Set<number>([sponsor.id]);
 
@@ -819,19 +820,19 @@ export class MockMatrixContract {
       if (!current) continue;
 
       const currentSlots = (current.rank1Slots || []).length;
-      if (currentSlots < 2) {
+      if (currentSlots < 4) {
         return {
           parentId: current.id,
           downlineCount: currentSlots,
-          maxSlots: 2,
-          availableSlots: Math.max(0, 2 - currentSlots),
+          maxSlots: 4,
+          availableSlots: Math.max(0, 4 - currentSlots),
           isActive: true,
           isExpired: false,
           wallet: current.address,
           source: 'tree_spillover',
           levelFromSponsor: level,
-          messageTh: `Spillover ชั้นที่ ${level} ใต้โหนด #${current.id} (ว่าง ${2 - currentSlots} ช่อง)`,
-          messageEn: `Spillover Level ${level} Under Node #${current.id} (${2 - currentSlots} open)`,
+          messageTh: `Spillover ชั้นที่ ${level} ใต้โหนด #${current.id} (ว่าง ${4 - currentSlots}/4 ช่อง)`,
+          messageEn: `Spillover Level ${level} Under Node #${current.id} (${4 - currentSlots}/4 open)`,
         };
       }
 
@@ -853,11 +854,13 @@ export class MockMatrixContract {
       };
     }
 
+    const rootUser = this.getUser(1);
+    const rootSlots = rootUser ? (rootUser.rank1Slots || []).length : 0;
     return {
       parentId: 1,
-      downlineCount: sponsorSlots,
-      maxSlots: 2,
-      availableSlots: 1,
+      downlineCount: rootSlots,
+      maxSlots: 4,
+      availableSlots: Math.max(0, 4 - rootSlots),
       isActive: true,
       isExpired: false,
       source: 'root_fallback',
@@ -867,7 +870,7 @@ export class MockMatrixContract {
     };
   }
 
-  // Get all candidate nodes under a root/sponsor that have open placement slots (< 2)
+  // Get all candidate nodes under a root/sponsor that have open placement slots (< 4)
   public getTeamAvailablePlacements(rootId: number = 1): PlacementCandidate[] {
     const targetRootId = Math.max(1, rootId || 1);
     const root = this.getUser(targetRootId);
@@ -886,13 +889,13 @@ export class MockMatrixContract {
       if (!node) continue;
 
       const downlines = (node.rank1Slots || []).length;
-      if (downlines < 2) {
+      if (downlines < 4) {
         candidates.push({
           id: node.id,
           wallet: node.address,
           downlineCount: downlines,
-          maxSlots: 2,
-          availableSlots: Math.max(0, 2 - downlines),
+          maxSlots: 4,
+          availableSlots: Math.max(0, 4 - downlines),
           level,
           isGhost: Boolean(node.isGhost),
           isActive: true,

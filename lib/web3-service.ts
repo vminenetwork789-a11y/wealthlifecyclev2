@@ -1627,7 +1627,7 @@ export async function checkParentValidOnChain(parentId: number): Promise<{
     const isExpired = Boolean(extractValue(result, 'isExpired', 1, false));
     const downlineCount = Number(extractValue(result, 'downlineCount', 2, 0));
     const isValid = isActive && !isExpired;
-    const canAcceptDownline = isValid && downlineCount < 2;
+    const canAcceptDownline = isValid && downlineCount < 4;
     return {
       isActive,
       isExpired,
@@ -1644,8 +1644,9 @@ export async function checkParentValidOnChain(parentId: number): Promise<{
 
 /**
  * Automatically search and determine the optimal Parent / Placement ID under a given Sponsor
- * 1. Checks if Sponsor node can accept downline (< 2 slots filled)
- * 2. If full, traverses the Sponsor's team tree (Level 1, Level 2) for active nodes with open slots
+ * Uses Breadth-First Search (BFS) in the downline tree to find the shallowest node with < 4 downlines:
+ * 1. Checks if Sponsor node can accept downline (< 4 slots filled)
+ * 2. If full, traverses the Sponsor's team tree (Level 1, Level 2, ...) for active nodes with open slots (< 4)
  * 3. If team tree is full, checks Smart Contract activeNodePointer
  * 4. Fallback to Root ID 1
  */
@@ -1653,24 +1654,24 @@ export async function findOptimalPlacementOnChain(sponsorId: number = 1): Promis
   const targetSponsorId = Math.max(1, sponsorId || 1);
 
   try {
-    // 1. Check direct sponsor node
+    // 1. Check direct sponsor node (< 4 downlines)
     const sponsorCheck = await checkParentValidOnChain(targetSponsorId);
     if (sponsorCheck.canAcceptDownline) {
       return {
         parentId: targetSponsorId,
         downlineCount: sponsorCheck.downlineCount,
-        maxSlots: 2,
-        availableSlots: Math.max(0, 2 - sponsorCheck.downlineCount),
+        maxSlots: 4,
+        availableSlots: Math.max(0, 4 - sponsorCheck.downlineCount),
         isActive: sponsorCheck.isActive,
         isExpired: sponsorCheck.isExpired,
         source: 'direct_sponsor',
         levelFromSponsor: 0,
-        messageTh: `ต่อตรงติดตัวผู้แนะนำ #${targetSponsorId} ทันที (ว่าง ${2 - sponsorCheck.downlineCount} ช่อง)`,
-        messageEn: `Direct Placement Under Sponsor #${targetSponsorId} (${2 - sponsorCheck.downlineCount} open)`,
+        messageTh: `ต่อตรงติดตัวผู้แนะนำ #${targetSponsorId} ทันที (ว่าง ${4 - sponsorCheck.downlineCount}/4 ช่อง)`,
+        messageEn: `Direct Placement Under Sponsor #${targetSponsorId} (${4 - sponsorCheck.downlineCount}/4 open)`,
       };
     }
 
-    // 2. Sponsor has 2/2 slots filled. Traverse team tree (Level 1, then Level 2)
+    // 2. Sponsor has 4/4 slots filled. Traverse team tree using BFS (Level 1, then Level 2)
     const tree = await fetchTeamTreeOnChain(targetSponsorId);
     if (tree && tree.rawNodes && tree.rawNodes.length > 0) {
       // Level 1 nodes first:
@@ -1681,15 +1682,15 @@ export async function findOptimalPlacementOnChain(sponsorId: number = 1): Promis
             return {
               parentId: node.id,
               downlineCount: check.downlineCount,
-              maxSlots: 2,
-              availableSlots: Math.max(0, 2 - check.downlineCount),
+              maxSlots: 4,
+              availableSlots: Math.max(0, 4 - check.downlineCount),
               isActive: check.isActive,
               isExpired: check.isExpired,
               wallet: 'wallet' in node ? (node as any).wallet : undefined,
               source: 'tree_spillover',
               levelFromSponsor: 1,
-              messageTh: `Spillover ชั้นที่ 1 ใต้โหนด #${node.id} (ว่าง ${2 - check.downlineCount} ช่อง)`,
-              messageEn: `Level 1 Spillover Under Node #${node.id} (${2 - check.downlineCount} open)`,
+              messageTh: `Spillover ชั้นที่ 1 ใต้โหนด #${node.id} (ว่าง ${4 - check.downlineCount}/4 ช่อง)`,
+              messageEn: `Level 1 Spillover Under Node #${node.id} (${4 - check.downlineCount}/4 open)`,
             };
           }
         }
@@ -1705,15 +1706,15 @@ export async function findOptimalPlacementOnChain(sponsorId: number = 1): Promis
                 return {
                   parentId: subNode.id,
                   downlineCount: check.downlineCount,
-                  maxSlots: 2,
-                  availableSlots: Math.max(0, 2 - check.downlineCount),
+                  maxSlots: 4,
+                  availableSlots: Math.max(0, 4 - check.downlineCount),
                   isActive: check.isActive,
                   isExpired: check.isExpired,
                   wallet: 'wallet' in subNode ? subNode.wallet : undefined,
                   source: 'tree_spillover',
                   levelFromSponsor: 2,
-                  messageTh: `Spillover ชั้นที่ 2 ใต้โหนด #${subNode.id} (ว่าง ${2 - check.downlineCount} ช่อง)`,
-                  messageEn: `Level 2 Spillover Under Node #${subNode.id} (${2 - check.downlineCount} open)`,
+                  messageTh: `Spillover ชั้นที่ 2 ใต้โหนด #${subNode.id} (ว่าง ${4 - check.downlineCount}/4 ช่อง)`,
+                  messageEn: `Level 2 Spillover Under Node #${subNode.id} (${4 - check.downlineCount}/4 open)`,
                 };
               }
             }
@@ -1735,14 +1736,14 @@ export async function findOptimalPlacementOnChain(sponsorId: number = 1): Promis
             return {
               parentId: Number(activeNodeId),
               downlineCount: pointerCheck.downlineCount,
-              maxSlots: 2,
-              availableSlots: Math.max(0, 2 - pointerCheck.downlineCount),
+              maxSlots: 4,
+              availableSlots: Math.max(0, 4 - pointerCheck.downlineCount),
               isActive: pointerCheck.isActive,
               isExpired: pointerCheck.isExpired,
               source: 'global_queue',
               levelFromSponsor: 99,
-              messageTh: `คิวระบบ Active Pointer แนะนำโหนด #${activeNodeId} (ว่าง ${2 - pointerCheck.downlineCount} ช่อง)`,
-              messageEn: `System Active Pointer Suggests Node #${activeNodeId} (${2 - pointerCheck.downlineCount} open)`,
+              messageTh: `คิวระบบ Active Pointer แนะนำโหนด #${activeNodeId} (ว่าง ${4 - pointerCheck.downlineCount}/4 ช่อง)`,
+              messageEn: `System Active Pointer Suggests Node #${activeNodeId} (${4 - pointerCheck.downlineCount}/4 open)`,
             };
           }
         }
@@ -1757,18 +1758,18 @@ export async function findOptimalPlacementOnChain(sponsorId: number = 1): Promis
       return {
         parentId: 1,
         downlineCount: rootCheck.downlineCount,
-        maxSlots: 2,
-        availableSlots: Math.max(0, 2 - rootCheck.downlineCount),
+        maxSlots: 4,
+        availableSlots: Math.max(0, 4 - rootCheck.downlineCount),
         isActive: rootCheck.isActive,
         isExpired: rootCheck.isExpired,
         source: 'root_fallback',
         levelFromSponsor: 0,
-        messageTh: 'ต่อตรงรหัสปฐมบท (Root ID #1)',
-        messageEn: 'Direct Root Placement (ID #1)',
+        messageTh: `ต่อตรงรหัสปฐมบท (Root ID #1) (ว่าง ${4 - rootCheck.downlineCount}/4 ช่อง)`,
+        messageEn: `Direct Root Placement (ID #1) (${4 - rootCheck.downlineCount}/4 open)`,
       };
     }
 
-    // 5. Fallback to mock contract calculation
+    // 5. Fallback to mock contract BFS calculation
     return matrixContract.findOptimalPlacement(targetSponsorId);
   } catch (err) {
     console.warn(`findOptimalPlacementOnChain(${sponsorId}) failed:`, err);
@@ -1777,7 +1778,7 @@ export async function findOptimalPlacementOnChain(sponsorId: number = 1): Promis
 }
 
 /**
- * Get all available placement candidate nodes under a given root/sponsor
+ * Get all available placement candidate nodes under a given root/sponsor (< 4 downlines)
  */
 export async function getTeamAvailablePlacementsOnChain(rootId: number = 1): Promise<PlacementCandidate[]> {
   const targetId = Math.max(1, rootId || 1);
@@ -1790,8 +1791,8 @@ export async function getTeamAvailablePlacementsOnChain(rootId: number = 1): Pro
         id: targetId,
         wallet: '',
         downlineCount: rootCheck.downlineCount,
-        maxSlots: 2,
-        availableSlots: Math.max(0, 2 - rootCheck.downlineCount),
+        maxSlots: 4,
+        availableSlots: Math.max(0, 4 - rootCheck.downlineCount),
         level: 0,
         isGhost: false,
         isActive: rootCheck.isActive,
@@ -1812,8 +1813,8 @@ export async function getTeamAvailablePlacementsOnChain(rootId: number = 1): Pro
               id: node.id,
               wallet: 'wallet' in node ? (node as any).wallet : '',
               downlineCount: check.downlineCount,
-              maxSlots: 2,
-              availableSlots: Math.max(0, 2 - check.downlineCount),
+              maxSlots: 4,
+              availableSlots: Math.max(0, 4 - check.downlineCount),
               level: 1,
               isGhost: Boolean((node as any).isGhost),
               isActive: check.isActive,
@@ -1836,8 +1837,8 @@ export async function getTeamAvailablePlacementsOnChain(rootId: number = 1): Pro
                 id: subNode.id,
                 wallet: 'wallet' in subNode ? subNode.wallet : '',
                 downlineCount: check.downlineCount,
-                maxSlots: 2,
-                availableSlots: Math.max(0, 2 - check.downlineCount),
+                maxSlots: 4,
+                availableSlots: Math.max(0, 4 - check.downlineCount),
                 level: 2,
                 isGhost: Boolean(subNode.isGhost),
                 isActive: check.isActive,
