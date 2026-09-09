@@ -1,0 +1,8 @@
+{
+  "name": "ZenithMatrix DApp",
+  "description": "Decentralized 3-Rank Matrix DApp with Ghost Reborn mechanics, Global Queue, Team Tree visualizer, and live smart contract simulator.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
