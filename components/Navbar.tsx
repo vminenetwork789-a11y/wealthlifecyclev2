@@ -66,7 +66,10 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenConnectModal }) => {
     connectWallet,
     refreshOnChainData,
     refreshWalletBalance,
-    showToast
+    showToast,
+    isPaymentModalOpen,
+    setIsPaymentModalOpen,
+    unreadPaymentCount,
   } = useWallet();
 
   const { isLaunched, formattedCountdown } = useLaunchCountdown();
@@ -294,6 +297,24 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenConnectModal }) => {
               )}
             </button>
 
+            {/* Payment Received Notifications Bell Button */}
+            <button
+              id="btn_payment_received_notifications"
+              onClick={() => setIsPaymentModalOpen(true)}
+              title={lang === 'th' ? 'รายการได้รับเงิน (Payment Notifications)' : 'Payment Received Notifications'}
+              className="relative flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-950/80 hover:bg-slate-900 border border-emerald-500/40 hover:border-emerald-400/70 text-emerald-300 hover:text-white transition active:scale-95 shadow-sm shrink-0 group"
+            >
+              <Bell className="w-3.5 h-3.5 text-emerald-400 group-hover:scale-110 transition-transform" />
+              <span className="hidden sm:inline text-xs font-bold text-emerald-300 group-hover:text-white">
+                {lang === 'th' ? 'แจ้งเตือนเงินเข้า' : 'Payments'}
+              </span>
+              {unreadPaymentCount > 0 && (
+                <span className="flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-black bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 rounded-full shadow-md shadow-emerald-500/30 animate-pulse">
+                  {unreadPaymentCount > 99 ? '99+' : unreadPaymentCount}
+                </span>
+              )}
+            </button>
+
             {/* Language Selector */}
             <div className="relative shrink-0">
               <button
@@ -493,6 +514,24 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenConnectModal }) => {
 
                       {/* Actions */}
                       <div className="space-y-1.5 pt-2 border-t border-slate-800">
+                        <button
+                          onClick={() => {
+                            setIsPaymentModalOpen(true);
+                            setShowAccountDropdown(false);
+                          }}
+                          className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold text-emerald-300 hover:bg-emerald-950/40 transition"
+                        >
+                          <span className="flex items-center gap-2">
+                            <Bell className="w-3.5 h-3.5 text-emerald-400" />
+                            {lang === 'th' ? 'รายการได้รับเงิน' : 'Payment Notifications'}
+                          </span>
+                          {unreadPaymentCount > 0 && (
+                            <span className="px-1.5 py-0.5 text-[10px] font-black bg-emerald-500 text-slate-950 rounded-full">
+                              {unreadPaymentCount}
+                            </span>
+                          )}
+                        </button>
+
                         <a
                           href={`${BSC_CONFIG.blockExplorerUrls[0]}/address/${activeAccount.address}`}
                           target="_blank"
@@ -621,6 +660,21 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenConnectModal }) => {
           >
             <Calculator className="w-4 h-4" />
             <span>{lang === 'th' ? 'คำนวณกำไร' : 'Calculator'}</span>
+          </button>
+
+          <button
+            onClick={() => setIsPaymentModalOpen(true)}
+            className="relative flex flex-col items-center gap-0.5 text-[10px] font-bold py-1.5 px-2 rounded-xl whitespace-nowrap transition text-emerald-400 hover:text-emerald-300"
+          >
+            <div className="relative">
+              <Bell className="w-4 h-4 text-emerald-400" />
+              {unreadPaymentCount > 0 && (
+                <span className="absolute -top-1 -right-2 flex items-center justify-center min-w-[14px] h-[14px] px-0.5 text-[8px] font-black bg-emerald-500 text-slate-950 rounded-full animate-pulse">
+                  {unreadPaymentCount > 9 ? '9+' : unreadPaymentCount}
+                </span>
+              )}
+            </div>
+            <span>{lang === 'th' ? 'ได้รับเงิน' : 'Payouts'}</span>
           </button>
 
           {isWallet1 && (

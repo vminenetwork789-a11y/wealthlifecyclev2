@@ -102,6 +102,22 @@ export interface GlobalQueueItemData {
   pendingRebornFunds: number;
 }
 
+export interface PaymentReceivedNotification {
+  id: string;
+  txHash: string;
+  timestamp: number;
+  amountUSDT: number;
+  category: 'SPONSOR_BONUS' | 'RANK1_PAYOUT' | 'RANK2_PAYOUT' | 'RANK3_PAYOUT' | 'REBORN_PAYOUT' | 'CLAIM_REWARD';
+  titleTh: string;
+  titleEn: string;
+  detailsTh: string;
+  detailsEn: string;
+  fromUser?: number;
+  toUser: number;
+  toAddress: string;
+  isRead: boolean;
+}
+
 export interface AppNotification {
   id: string;
   title: string;
@@ -109,6 +125,9 @@ export interface AppNotification {
   type: 'success' | 'info' | 'reward' | 'ghost';
   timestamp: number;
   amount?: number;
+  txHash?: string;
+  category?: string;
+  read?: boolean;
 }
 
 export interface RegistrationModalState {

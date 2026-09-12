@@ -14,6 +14,7 @@ import { NotificationToast } from '../components/NotificationToast';
 import { RegisterWaitingModal } from '../components/RegisterWaitingModal';
 import { AppLoadingScreen } from '../components/AppLoadingScreen';
 import { MaintenanceModal } from '../components/MaintenanceModal';
+import { PaymentReceivedModal } from '../components/PaymentReceivedModal';
 import { Ghost, ShieldCheck, Wrench } from 'lucide-react';
 
 function AppContent() {
@@ -161,6 +162,9 @@ function AppContent() {
 
       {/* Live Toast Notifications */}
       <NotificationToast />
+
+      {/* Payment Received Notifications Modal */}
+      <PaymentReceivedModal />
 
     </div>
   );

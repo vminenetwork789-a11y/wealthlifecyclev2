@@ -41,7 +41,8 @@ import {
   Table as TableIcon,
   List,
   Filter,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Bell
 } from 'lucide-react';
 
 interface DashboardProps {
@@ -83,7 +84,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ onOpenConnectModal }) => {
     getWalletExpiredIdsAndTotalEarned,
     checkHasReachedRank2,
     setActiveTab,
-    showToast
+    showToast,
+    setIsPaymentModalOpen,
+    unreadPaymentCount,
   } = useWallet();
 
   const { isLaunched, formattedCountdown, launchDateFormattedTh, launchDateFormattedEn } = useLaunchCountdown();
@@ -2498,6 +2501,27 @@ export const Dashboard: React.FC<DashboardProps> = ({ onOpenConnectModal }) => {
                 <span>{lang === 'th' ? 'ดูรายละเอียดแยกตาม ID' : 'View Details by ID'}</span>
               </span>
               <ArrowRight className="w-3 h-3 text-slate-400 group-hover:translate-x-0.5 group-hover:text-emerald-400 transition" />
+            </button>
+
+            {/* Payment Received Notifications button */}
+            <button
+              id="btn_open_payment_received_modal_dashboard"
+              onClick={() => setIsPaymentModalOpen(true)}
+              className="mt-2 w-full py-2 px-3 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-emerald-500/40 hover:border-emerald-400 text-xs font-bold text-emerald-300 hover:text-white transition flex items-center justify-between group shadow-sm active:scale-95"
+              title={lang === 'th' ? 'ดูรายการแจ้งเตือนการได้รับเงิน' : 'View payment received notifications'}
+            >
+              <span className="flex items-center gap-1.5 text-emerald-400 font-mono text-[11px]">
+                <Bell className="w-3.5 h-3.5" />
+                <span>{lang === 'th' ? 'รายการได้รับเงิน & แจ้งเตือน' : 'Payment Notifications'}</span>
+              </span>
+              <div className="flex items-center gap-1.5">
+                {unreadPaymentCount > 0 && (
+                  <span className="px-1.5 py-0.5 text-[10px] font-black bg-emerald-500 text-slate-950 rounded-full animate-pulse">
+                    {unreadPaymentCount}
+                  </span>
+                )}
+                <ArrowRight className="w-3 h-3 text-slate-400 group-hover:translate-x-0.5 group-hover:text-emerald-400 transition" />
+              </div>
             </button>
           </div>
 

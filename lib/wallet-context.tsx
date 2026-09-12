@@ -1,9 +1,9 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useSyncExternalStore, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useSyncExternalStore, useCallback, useRef, useMemo } from 'react';
 import { Language, translations } from './translations';
 import { matrixContract, ContractState } from './mock-contract';
-import { MatrixUser, AppNotification, RegistrationModalState, UserDashboardData, PlatformStatsData, PlatformAnalyticsData, PlacementSearchResult, PlacementCandidate } from './types';
+import { MatrixUser, AppNotification, PaymentReceivedNotification, RegistrationModalState, UserDashboardData, PlatformStatsData, PlatformAnalyticsData, PlacementSearchResult, PlacementCandidate } from './types';
 import { sounds } from './audio';
 import { ethers } from 'ethers';
 import { 
@@ -136,7 +136,77 @@ interface WalletContextType {
   loadingProgress: number;
   loadingStatusText: string;
   showToast: (title: string, message: string, type?: 'success' | 'info' | 'reward' | 'ghost', amount?: number, txHash?: string) => void;
+  paymentNotifications: PaymentReceivedNotification[];
+  unreadPaymentCount: number;
+  isPaymentModalOpen: boolean;
+  setIsPaymentModalOpen: (open: boolean) => void;
+  paymentSoundEnabled: boolean;
+  setPaymentSoundEnabled: (enabled: boolean) => void;
+  markAllPaymentsAsRead: () => void;
+  markPaymentAsRead: (id: string) => void;
+  clearPaymentNotifications: () => void;
+  simulateIncomingPayment: (category?: 'SPONSOR_BONUS' | 'RANK1_PAYOUT' | 'RANK2_PAYOUT' | 'RANK3_PAYOUT') => void;
 }
+
+const INITIAL_PAYMENT_NOTIFICATIONS: PaymentReceivedNotification[] = [
+  {
+    id: 'pay_init_1',
+    txHash: '0x43b2a88190c1fef39281a4b92138cd9183478cb90',
+    timestamp: Date.now() - 1000 * 60 * 12,
+    amountUSDT: 0.20,
+    category: 'SPONSOR_BONUS',
+    titleTh: '⚡ ได้รับโบนัสค่าแนะนำตรง 10%',
+    titleEn: '⚡ 10% Direct Sponsor Bonus Received',
+    detailsTh: 'ได้รับค่าแนะนำ 10% (0.20 USDT) จากสมาชิกสายงานตรง #4 ลงทะเบียน 2.0 USDT',
+    detailsEn: 'Earned 10% direct bonus (0.20 USDT) from member #4 registering 2.0 USDT',
+    fromUser: 4,
+    toUser: 1,
+    toAddress: '0x992B0852d7e108d43E388d2239d5Fec92455c408',
+    isRead: false,
+  },
+  {
+    id: 'pay_init_2',
+    txHash: '0x88ea3091bbcd2194a0293881bce89201fa882941b',
+    timestamp: Date.now() - 1000 * 60 * 45,
+    amountUSDT: 2.00,
+    category: 'RANK2_PAYOUT',
+    titleTh: '🚀 ได้รับเงินสดจากคิวกลาง Rank 2 (สล็อต 1/2)',
+    titleEn: '🚀 Rank 2 Global Queue Payout (Slot 1/2)',
+    detailsTh: 'ได้รับเงินสด 50% (2.00 USDT) โอนตรงเข้ากระเป๋า เมื่อคิวรันมาถึงและมีรหัสมาเติม',
+    detailsEn: 'Received 50% cash payout (2.00 USDT) directly to wallet from Rank 2 FIFO Queue',
+    toUser: 1,
+    toAddress: '0x992B0852d7e108d43E388d2239d5Fec92455c408',
+    isRead: false,
+  },
+  {
+    id: 'pay_init_3',
+    txHash: '0x12c99a8183bcda89104fa289190abf8910948921a',
+    timestamp: Date.now() - 1000 * 60 * 120,
+    amountUSDT: 0.60,
+    category: 'RANK1_PAYOUT',
+    titleTh: '💎 ได้รับเงินปันผลผัง Rank 1 (สล็อตเต็ม)',
+    titleEn: '💎 Rank 1 Matrix Slot Payout',
+    detailsTh: 'มีรหัสสมาชิกใหม่/Spillover ตกลงมาในผัง 4 ช่อง Rank 1 รับเงิน 0.60 USDT',
+    detailsEn: 'A downline member fell into your Rank 1 4-slot matrix. Earned 0.60 USDT',
+    toUser: 1,
+    toAddress: '0x992B0852d7e108d43E388d2239d5Fec92455c408',
+    isRead: true,
+  },
+  {
+    id: 'pay_init_4',
+    txHash: '0x99fa41098231cd89a198d890bfa182049102488aa',
+    timestamp: Date.now() - 1000 * 60 * 240,
+    amountUSDT: 8.00,
+    category: 'RANK3_PAYOUT',
+    titleTh: '👑 ได้รับเงินสดจบกระดาน Rank 3 Master',
+    titleEn: '👑 Rank 3 Master Board Completed Payout',
+    detailsTh: 'กระดาน Rank 3 ครบ 4 ช่อง รับเงินสด 8.00 USDT และระบบเสกผี 4 ตัวช่วยดันโครงข่าย',
+    detailsEn: 'Completed Rank 3 board. Received 8.00 USDT in cash and spawned 4 catalysts',
+    toUser: 1,
+    toAddress: '0x992B0852d7e108d43E388d2239d5Fec92455c408',
+    isRead: true,
+  },
+];
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
 
@@ -253,6 +323,49 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
 
   const [toast, setToast] = useState<AppNotification | null>(null);
   const [isBotActive, setIsBotActive] = useState<boolean>(false);
+
+  // Incoming Payment Received Notifications State
+  const [paymentNotifications, setPaymentNotifications] = useState<PaymentReceivedNotification[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('wealthlifecycle_payment_notifications');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      } catch {}
+    }
+    return INITIAL_PAYMENT_NOTIFICATIONS;
+  });
+
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState<boolean>(false);
+  const [paymentSoundEnabled, setPaymentSoundEnabled] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('wealthlifecycle_payment_sound');
+        if (saved !== null) return saved === 'true';
+      } catch {}
+    }
+    return true;
+  });
+
+  // Save sound setting
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('wealthlifecycle_payment_sound', paymentSoundEnabled.toString());
+      } catch {}
+    }
+  }, [paymentSoundEnabled]);
+
+  // Save notifications to localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('wealthlifecycle_payment_notifications', JSON.stringify(paymentNotifications.slice(0, 100)));
+      } catch {}
+    }
+  }, [paymentNotifications]);
 
   // Refs for stabilizing callbacks without triggering re-fetch cascades
   const walletIdsRef = useRef<number[]>([]);
@@ -808,6 +921,199 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       setToast(null);
     }, 6000);
   }, []);
+
+  // Track unread payment count
+  const unreadPaymentCount = useMemo(() => {
+    return paymentNotifications.filter(n => !n.isRead).length;
+  }, [paymentNotifications]);
+
+  // Mark all incoming payment notifications as read
+  const markAllPaymentsAsRead = useCallback(() => {
+    setPaymentNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+  }, []);
+
+  // Mark single incoming payment as read
+  const markPaymentAsRead = useCallback((id: string) => {
+    setPaymentNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+  }, []);
+
+  // Clear payment notifications history
+  const clearPaymentNotifications = useCallback(() => {
+    setPaymentNotifications([]);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.removeItem('wealthlifecycle_payment_notifications');
+      } catch {}
+    }
+  }, []);
+
+  // Simulate Incoming Payment (for testing, live demo, or verifying sound/toast)
+  const simulateIncomingPayment = useCallback((cat: 'SPONSOR_BONUS' | 'RANK1_PAYOUT' | 'RANK2_PAYOUT' | 'RANK3_PAYOUT' = 'SPONSOR_BONUS') => {
+    let amountUSDT = 0.20;
+    let titleTh = '⚡ ได้รับโบนัสค่าแนะนำตรง 10%';
+    let titleEn = '⚡ 10% Direct Sponsor Bonus';
+    let detailsTh = 'มีสมาชิกใหม่สมัครผ่านลิงก์แนะนำของคุณ รับ 10% (0.20 USDT) โอนตรงเข้ากระเป๋า';
+    let detailsEn = 'A new member joined via your direct link. Earned 10% (0.20 USDT) directly to wallet';
+
+    if (cat === 'RANK1_PAYOUT') {
+      amountUSDT = 0.60;
+      titleTh = '💎 ได้รับเงินปันผลผัง Rank 1';
+      titleEn = '💎 Rank 1 Matrix Slot Payout';
+      detailsTh = 'มีรหัสสมาชิกใหม่/Spillover ตกลงมาในผัง 4 ช่อง Rank 1 รับเงินปันผล 0.60 USDT';
+      detailsEn = 'A member node filled your Rank 1 4-slot matrix. Earned 0.60 USDT';
+    } else if (cat === 'RANK2_PAYOUT') {
+      amountUSDT = 2.00;
+      titleTh = '🚀 ได้รับเงินสดจากคิวกลาง Rank 2';
+      titleEn = '🚀 Rank 2 Global Queue Payout';
+      detailsTh = 'คิวกลาง Rank 2 รันมาถึงรอบจ่ายเงิน รับเงินสด 50% (2.00 USDT) โอนตรงเข้ากระเป๋า';
+      detailsEn = 'Rank 2 FIFO queue reached payout slot. Received 50% cash (2.00 USDT)';
+    } else if (cat === 'RANK3_PAYOUT') {
+      amountUSDT = 8.00;
+      titleTh = '👑 ได้รับเงินสดบอร์ด Rank 3 Master';
+      titleEn = '👑 Rank 3 Master Board Payout';
+      detailsTh = 'กระดาน Rank 3 ครบ 4 ช่อง รับเงินสด 8.00 USDT เต็มจำนวน พร้อมเสกผี 4 ตัวช่วยดันโครงข่าย';
+      detailsEn = 'Rank 3 board completed all 4 slots. Received full 8.00 USDT cash payout';
+    }
+
+    const randHex = Array.from({ length: 40 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+    const txHash = `0x${randHex}`;
+    const targetUserId = selectedUserId || walletIds[0] || 1;
+    const targetAddr = activeAccount?.address || '0x992B0852d7e108d43E388d2239d5Fec92455c408';
+
+    const newPayment: PaymentReceivedNotification = {
+      id: `pay_sim_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+      txHash,
+      timestamp: Date.now(),
+      amountUSDT,
+      category: cat,
+      titleTh,
+      titleEn,
+      detailsTh,
+      detailsEn,
+      toUser: targetUserId,
+      toAddress: targetAddr,
+      isRead: false,
+    };
+
+    setPaymentNotifications(prev => [newPayment, ...prev]);
+
+    if (paymentSoundEnabled && !isMuted) {
+      if (cat === 'RANK3_PAYOUT') {
+        sounds.playUpgrade();
+      } else {
+        sounds.playCoin();
+      }
+    }
+
+    showToast(
+      lang === 'th' ? titleTh : titleEn,
+      lang === 'th' ? detailsTh : detailsEn,
+      'reward',
+      amountUSDT,
+      txHash
+    );
+  }, [selectedUserId, walletIds, activeAccount?.address, paymentSoundEnabled, isMuted, lang, showToast]);
+
+  // Real-time detection of new incoming payment transactions
+  const knownTxIdsRef = useRef<Set<string>>(new Set());
+  const hasPopulatedKnownTxsRef = useRef<boolean>(false);
+
+  // Monitor for newly incoming payment transactions during session
+  useEffect(() => {
+    if (!contractState?.transactions || contractState.transactions.length === 0) return;
+
+    if (!hasPopulatedKnownTxsRef.current) {
+      hasPopulatedKnownTxsRef.current = true;
+      contractState.transactions.forEach(t => knownTxIdsRef.current.add(t.id));
+      return;
+    }
+
+    const newPaymentTxs = contractState.transactions.filter(tx => {
+      if (knownTxIdsRef.current.has(tx.id)) return false;
+      knownTxIdsRef.current.add(tx.id);
+      return (
+        tx.amountUSDT > 0 &&
+        tx.status === 'SUCCESS' &&
+        (
+          tx.type === 'SPONSOR_BONUS' || 
+          tx.type === 'RANK1_PAYOUT' || 
+          tx.type === 'RANK2_PAYOUT' || 
+          tx.type === 'RANK3_PAYOUT' || 
+          tx.type === 'RANK2_CYCLE' || 
+          tx.type === 'RANK3_CYCLE' ||
+          tx.type === 'CLAIM_REWARD' ||
+          tx.type === 'PROCESS_REBORN'
+        )
+      );
+    });
+
+    if (newPaymentTxs.length > 0) {
+      const generatedNotifs: PaymentReceivedNotification[] = newPaymentTxs.map(tx => {
+        let category: PaymentReceivedNotification['category'] = 'SPONSOR_BONUS';
+        let titleTh = '⚡ ได้รับโบนัสค่าแนะนำตรง 10%';
+        let titleEn = '⚡ 10% Direct Sponsor Bonus Received';
+        let detailsTh = `ได้รับเงินโอนเข้ากระเป๋า +${tx.amountUSDT.toFixed(2)} USDT`;
+        let detailsEn = `Received payout +${tx.amountUSDT.toFixed(2)} USDT directly to wallet`;
+
+        if (tx.type === 'RANK1_PAYOUT') {
+          category = 'RANK1_PAYOUT';
+          titleTh = '💎 ได้รับเงินปันผลผัง Rank 1';
+          titleEn = '💎 Rank 1 Matrix Slot Payout';
+          detailsTh = `มีรหัสตกลงมาในผัง 4 ช่อง Rank 1 ของคุณ ได้รับ +${tx.amountUSDT.toFixed(2)} USDT`;
+          detailsEn = `A member node filled your Rank 1 slot. Received +${tx.amountUSDT.toFixed(2)} USDT`;
+        } else if (tx.type === 'RANK2_PAYOUT' || tx.type === 'RANK2_CYCLE') {
+          category = 'RANK2_PAYOUT';
+          titleTh = '🚀 ได้รับเงินสดจากคิวกลาง Rank 2';
+          titleEn = '🚀 Rank 2 Global Queue Payout';
+          detailsTh = `คิวกลาง Rank 2 รันมาถึง ได้รับเงินสด 50% +${tx.amountUSDT.toFixed(2)} USDT เข้ากระเป๋า`;
+          detailsEn = `Rank 2 FIFO queue reached payout slot. Received +${tx.amountUSDT.toFixed(2)} USDT in cash`;
+        } else if (tx.type === 'RANK3_PAYOUT' || tx.type === 'RANK3_CYCLE') {
+          category = 'RANK3_PAYOUT';
+          titleTh = '👑 ได้รับเงินสดบอร์ด Rank 3 Master';
+          titleEn = '👑 Rank 3 Master Board Payout';
+          detailsTh = `จบกระดาน Rank 3 ได้รับเงินสด +${tx.amountUSDT.toFixed(2)} USDT`;
+          detailsEn = `Rank 3 board completed. Received +${tx.amountUSDT.toFixed(2)} USDT in cash`;
+        } else if (tx.type === 'PROCESS_REBORN') {
+          category = 'REBORN_PAYOUT';
+          titleTh = '✨ รับเงินสนับสนุน Reborn';
+          titleEn = '✨ Reborn Payout Allocation';
+        } else if (tx.type === 'CLAIM_REWARD') {
+          category = 'CLAIM_REWARD';
+          titleTh = '🎁 เคลมเงินรางวัลสำเร็จ';
+          titleEn = '🎁 Claimed Reward Payout';
+        }
+
+        return {
+          id: `pay_${Date.now()}_${tx.id}`,
+          txHash: tx.txHash,
+          timestamp: tx.timestamp || Date.now(),
+          amountUSDT: tx.amountUSDT,
+          category,
+          titleTh,
+          titleEn,
+          detailsTh,
+          detailsEn,
+          toUser: tx.userId,
+          toAddress: tx.userAddress,
+          isRead: false,
+        };
+      });
+
+      setPaymentNotifications(prev => [...generatedNotifs, ...prev]);
+
+      const top = generatedNotifs[0];
+      if (paymentSoundEnabled && !isMuted) {
+        sounds.playCoin();
+      }
+      showToast(
+        lang === 'th' ? top.titleTh : top.titleEn,
+        lang === 'th' ? top.detailsTh : top.detailsEn,
+        'reward',
+        top.amountUSDT,
+        top.txHash
+      );
+    }
+  }, [contractState?.transactions, paymentSoundEnabled, isMuted, lang, showToast]);
 
   // Run Simulation Once (On-Demand Single Step Execution)
   const runSimulationOnce = useCallback(() => {
@@ -2208,6 +2514,16 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         loadingProgress,
         loadingStatusText,
         showToast,
+        paymentNotifications,
+        unreadPaymentCount,
+        isPaymentModalOpen,
+        setIsPaymentModalOpen,
+        paymentSoundEnabled,
+        setPaymentSoundEnabled,
+        markAllPaymentsAsRead,
+        markPaymentAsRead,
+        clearPaymentNotifications,
+        simulateIncomingPayment,
       }}
     >
       {children}
