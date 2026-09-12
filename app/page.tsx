@@ -7,7 +7,6 @@ import { LandingPage } from '../components/LandingPage';
 import { Dashboard } from '../components/Dashboard';
 import { MatrixVisualizer } from '../components/MatrixVisualizer';
 import { AdminPanel } from '../components/AdminPanel';
-import { Calculator } from '../components/Calculator';
 import { SmartContractViewer } from '../components/SmartContractViewer';
 import { ConnectWalletModal } from '../components/ConnectWalletModal';
 import { NotificationToast } from '../components/NotificationToast';
@@ -91,7 +90,6 @@ function AppContent() {
         {isConnected && activeTab === 'dashboard' && <Dashboard onOpenConnectModal={() => setIsConnectModalOpen(true)} />}
         {isConnected && activeTab === 'matrix' && <MatrixVisualizer />}
         {isConnected && activeTab === 'admin' && <AdminPanel />}
-        {isConnected && activeTab === 'calculator' && <Calculator />}
         {isConnected && activeTab === 'contract' && <SmartContractViewer />}
       </main>
 

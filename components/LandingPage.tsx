@@ -412,22 +412,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenConnectModal }) 
               <Layers className="w-3.5 h-3.5 text-sky-500 dark:text-sky-400" />
               <span>{t.btnViewTree}</span>
             </button>
-
-            <button
-              id="hero_btn_calc"
-              onClick={() => {
-                if (!isConnected) onOpenConnectModal();
-                else setActiveTab('calculator');
-              }}
-              className={`px-4 py-2.5 rounded-xl border font-medium text-xs sm:text-sm flex items-center gap-1.5 transition ${
-                theme === 'light'
-                  ? 'bg-white hover:bg-slate-50 border-purple-200 text-purple-700 shadow-sm'
-                  : 'bg-slate-900/90 hover:bg-slate-800 border-purple-500/30 text-purple-300'
-              }`}
-            >
-              <TrendingUp className="w-3.5 h-3.5 text-purple-500 dark:text-purple-400" />
-              <span>{t.navCalculator}</span>
-            </button>
           </div>
 
           {/* Quick Metrics Bar (4 Stats including Global Queues Rank 2 & 3) */}

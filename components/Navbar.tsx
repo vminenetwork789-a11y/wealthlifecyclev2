@@ -17,7 +17,6 @@ import {
   LayoutDashboard, 
   Home, 
   Binary, 
-  Calculator, 
   FileCode2, 
   Sparkles, 
   Link2, 
@@ -183,19 +182,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenConnectModal }) => {
               >
                 <Binary className="w-3.5 h-3.5 shrink-0" />
                 <span>{t.navMatrix}</span>
-              </button>
-
-              <button
-                id="nav_btn_calc"
-                onClick={() => setActiveTab('calculator')}
-                className={`flex items-center gap-1 xl:gap-1.5 px-2 xl:px-2.5 py-1 xl:py-1.5 rounded-lg text-[11px] xl:text-xs font-bold transition-all whitespace-nowrap shrink-0 ${
-                  activeTab === 'calculator' 
-                    ? 'bg-sky-500/30 text-sky-200 border border-sky-400/60 shadow-sm' 
-                    : 'text-slate-200 hover:text-white hover:bg-slate-800/90'
-                }`}
-              >
-                <Calculator className="w-3.5 h-3.5 shrink-0" />
-                <span>{t.navCalculator}</span>
               </button>
 
               <button
@@ -648,18 +634,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenConnectModal }) => {
           >
             <Binary className="w-4 h-4" />
             <span>{lang === 'th' ? 'ผังเมทริกซ์' : 'Matrix'}</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('calculator')}
-            className={`flex flex-col items-center gap-0.5 text-[10px] font-bold py-1.5 px-2 rounded-xl whitespace-nowrap transition ${
-              activeTab === 'calculator' 
-                ? 'text-sky-400 bg-sky-500/20 border border-sky-500/40 shadow-sm' 
-                : 'text-slate-300 hover:text-white'
-            }`}
-          >
-            <Calculator className="w-4 h-4" />
-            <span>{lang === 'th' ? 'คำนวณกำไร' : 'Calculator'}</span>
           </button>
 
           <button

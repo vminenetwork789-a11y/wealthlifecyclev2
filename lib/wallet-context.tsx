@@ -76,7 +76,7 @@ interface WalletContextType {
   setTheme: (theme: 'dark' | 'light') => void;
   toggleTheme: () => void;
   isMuted: boolean;
-  activeTab: 'landing' | 'dashboard' | 'matrix' | 'admin' | 'calculator' | 'contract';
+  activeTab: 'landing' | 'dashboard' | 'matrix' | 'admin' | 'contract';
   systemStatus: 'online' | 'maintenance';
   setSystemStatus: (status: 'online' | 'maintenance') => void;
   toast: AppNotification | null;
@@ -91,7 +91,7 @@ interface WalletContextType {
   closeRegistrationModal: () => void;
   setLang: (lang: Language) => void;
   toggleMute: () => void;
-  setActiveTab: (tab: 'landing' | 'dashboard' | 'matrix' | 'admin' | 'calculator' | 'contract') => void;
+  setActiveTab: (tab: 'landing' | 'dashboard' | 'matrix' | 'admin' | 'contract') => void;
   connectWallet: (account?: WalletAccount) => void;
   connectInjectedWeb3Wallet: (walletName?: string) => Promise<boolean>;
   disconnectWallet: () => void;
@@ -219,7 +219,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [lang, setLang] = useState<Language>('th');
   const [theme, setThemeState] = useState<'dark' | 'light'>('dark');
   const [isMuted, setIsMuted] = useState<boolean>(false);
-  const [activeTab, setActiveTab] = useState<'landing' | 'dashboard' | 'matrix' | 'admin' | 'calculator' | 'contract'>('landing');
+  const [activeTab, setActiveTab] = useState<'landing' | 'dashboard' | 'matrix' | 'admin' | 'contract'>('landing');
   const [systemStatus, setSystemStatusState] = useState<'online' | 'maintenance'>(() => {
     if (typeof window !== 'undefined') {
       try {
@@ -792,7 +792,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     };
   }, [refreshOnChainData, refreshWalletBalance, fetchWalletIds, onChainContractData?.owner]);
 
-  const handleSetActiveTab = useCallback((tab: 'landing' | 'dashboard' | 'matrix' | 'admin' | 'calculator' | 'contract') => {
+  const handleSetActiveTab = useCallback((tab: 'landing' | 'dashboard' | 'matrix' | 'admin' | 'contract') => {
     setActiveTab(tab);
     void (async () => {
       try {

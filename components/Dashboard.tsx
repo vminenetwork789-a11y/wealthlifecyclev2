@@ -2990,13 +2990,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ onOpenConnectModal }) => {
                   </div>
                 </div>
               </div>
-
-              <button
-                onClick={() => setActiveTab('calculator')}
-                className="w-full mt-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-750 border border-slate-600 text-xs sm:text-sm font-black text-white transition flex items-center justify-center gap-2 shadow-md active:scale-95"
-              >
-                <span>{t.navCalculator}</span>
-              </button>
             </div>
           )}
 
