@@ -34,6 +34,11 @@ import {
   fetchWalletExpiredIdsAndTotalEarnedOnChain,
   checkHasReachedRank2OnChain,
   adminSetQueueHeadOnChain as adminSetQueueHeadService,
+  adminSpawnGhostRank1OnChain as adminSpawnGhostRank1Service,
+  adminUpdatePlacementIdOnChain as adminUpdatePlacementIdService,
+  adminUpdateSponsorIdOnChain as adminUpdateSponsorIdService,
+  adminUpdateUserExpiryOnChain as adminUpdateUserExpiryService,
+  adminUpdateUserWalletOnChain as adminUpdateUserWalletService,
   batchMigrateGlobalQueuesOnChain as batchMigrateGlobalQueuesService,
   batchMigrateUsersOnChain as batchMigrateUsersService,
   BatchMigrateUsersParams,
@@ -108,7 +113,12 @@ interface WalletContextType {
   claimRewardsCurrentAccount: () => Promise<boolean>;
   processRebornOnChain: (batchSize?: number) => Promise<boolean>;
   spawnGhostPushesOnChain: (rank: number, amount: number) => Promise<boolean>;
+  spawnGhostRank1OnChain: (rootId: number, amount: number) => Promise<boolean>;
   adminSetQueueHeadOnChain: (rank: number, newHeadIndex: number) => Promise<boolean>;
+  adminUpdatePlacementIdOnChain: (userId: number, newPlacementId: number) => Promise<boolean>;
+  adminUpdateSponsorIdOnChain: (userId: number, newSponsorId: number) => Promise<boolean>;
+  adminUpdateUserExpiryOnChain: (userId: number, newExpiryTimestamp: number) => Promise<boolean>;
+  adminUpdateUserWalletOnChain: (userId: number, newWallet: string) => Promise<boolean>;
   setPauseOnChain: (paused: boolean) => Promise<boolean>;
   lockMigrationOnChain: () => Promise<boolean>;
   emergencyWithdrawOnChain: (tokenAddress: string, amount: string | number | bigint) => Promise<boolean>;
@@ -1889,11 +1899,11 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
 
         const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
         
-        // Note: On BSC Smart Contract, adminSpawnGhostPushes supports Rank 2 (Silver Queue) and Rank 3 (Gold Board).
-        // If Rank 1 is selected on-chain, route to processRebornQueue
+        // Note: On BSC Smart Contract, adminSpawnGhostRank1 injects into Rank 1 Matrix.
+        // adminSpawnGhostPushes pushes into Rank 2 or Rank 3 queues.
         let tx;
         if (rank === 1) {
-          tx = await contract.processRebornQueue(amount);
+          tx = await contract.adminSpawnGhostRank1(1, amount);
         } else {
           tx = await contract.adminSpawnGhostPushes(rank, amount);
         }
@@ -1946,6 +1956,58 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   };
 
   /**
+   * Admin spawn ghosts into Rank 1 matrix under a root ID: adminSpawnGhostRank1(uint256 rootId, uint256 amount)
+   */
+  const spawnGhostRank1OnChain = async (rootId: number, amount: number): Promise<boolean> => {
+    if (activeAccount?.isRealWeb3 && typeof window !== 'undefined') {
+      const provider = getBrowserProvider();
+      if (!provider) return false;
+      try {
+        setTxPending(true);
+        const signer = await provider.getSigner();
+        const tx = await adminSpawnGhostRank1Service(rootId || 1, amount, signer);
+        setLastTxHash(tx.hash);
+        showToast(
+          lang === 'th' ? 'ส่งคำสั่งเสกผีลงผัง Rank 1 แล้ว' : 'Admin Spawn Ghost Rank 1 Broadcasted',
+          `Tx: ${tx.hash.slice(0, 10)}... (Root #${rootId}, ${amount} Ghosts)`,
+          'ghost',
+          undefined,
+          tx.hash
+        );
+        await tx.wait();
+        setTxPending(false);
+        await refreshOnChainData(true);
+        showToast(
+          lang === 'th' ? '👻 เสกผีลงผัง Rank 1 สำเร็จ!' : '👻 Rank 1 Ghosts Spawned on Chain!',
+          `ฉีด ${amount} รหัสผีลงใต้รหัส #${rootId || 1} เรียบร้อย`,
+          'ghost',
+          undefined,
+          tx.hash
+        );
+        return true;
+      } catch (err: unknown) {
+        setTxPending(false);
+        const msg = (err as { reason?: string; message?: string })?.reason || (err as { message?: string })?.message || 'Error';
+        showToast(
+          lang === 'th' ? 'เกิดข้อผิดพลาดในการเสกผี Rank 1' : 'Spawn Ghost Rank 1 Error',
+          msg.includes('user rejected') ? (lang === 'th' ? 'ผู้ใช้ยกเลิกการทำรายการ' : 'Transaction rejected') : msg.slice(0, 90),
+          'info'
+        );
+        return false;
+      }
+    }
+
+    // Simulation Mode
+    const result = matrixContract.spawnGhosts(1, amount, 'Admin Manual Injection');
+    showToast(
+      lang === 'th' ? '👻 เสกผี Rank 1 สำเร็จ (Sim)' : '👻 Rank 1 Ghosts Injected (Sim)',
+      `ฉีด ${result.spawnedCount} รหัสผีลงผัง Rank 1`,
+      'ghost'
+    );
+    return true;
+  };
+
+  /**
    * Admin set Queue Head on Smart Contract: adminSetQueueHead(uint256 rank, uint256 newHeadIndex)
    */
   const adminSetQueueHeadOnChain = async (rank: number, newHeadIndex: number): Promise<boolean> => {
@@ -1992,6 +2054,238 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     showToast(
       lang === 'th' ? '✅ อัปเดต Queue Head สำเร็จ (Sim)' : '✅ Queue Head Updated (Sim)',
       `Rank ${rank} queue head set to index ${newHeadIndex}`,
+      'success'
+    );
+    return true;
+  };
+
+  /**
+   * Admin update user expiry timestamp: adminUpdateUserExpiry(uint256 _userId, uint256 _newExpiryTimestamp)
+   */
+  const adminUpdateUserExpiryOnChain = async (userId: number, newExpiryTimestamp: number): Promise<boolean> => {
+    if (activeAccount?.isRealWeb3 && typeof window !== 'undefined') {
+      const provider = getBrowserProvider();
+      if (!provider) return false;
+      try {
+        setTxPending(true);
+        const signer = await provider.getSigner();
+        const tx = await adminUpdateUserExpiryService(userId, newExpiryTimestamp, signer);
+        setLastTxHash(tx.hash);
+        showToast(
+          lang === 'th' ? 'ส่งคำสั่งอัปเดตวันหมดอายุแล้ว' : 'Update User Expiry Tx Broadcasted',
+          `Tx: ${tx.hash.slice(0, 10)}... (ID #${userId})`,
+          'info',
+          undefined,
+          tx.hash
+        );
+        await tx.wait();
+        setTxPending(false);
+        await refreshOnChainData(true);
+        const dateStr = new Date(newExpiryTimestamp * 1000).toLocaleDateString();
+        showToast(
+          lang === 'th' ? '✅ อัปเดตวันหมดอายุสำเร็จ!' : '✅ User Expiry Updated!',
+          `ID #${userId} new expiry: ${dateStr}`,
+          'success',
+          undefined,
+          tx.hash
+        );
+        return true;
+      } catch (err: unknown) {
+        setTxPending(false);
+        const msg = (err as { reason?: string; message?: string })?.reason || (err as { message?: string })?.message || 'Error';
+        showToast(
+          lang === 'th' ? 'เกิดข้อผิดพลาดในการอัปเดตวันหมดอายุ' : 'Update Expiry Error',
+          msg.includes('user rejected') ? (lang === 'th' ? 'ผู้ใช้ยกเลิกการทำรายการ' : 'Transaction rejected') : msg.slice(0, 90),
+          'info'
+        );
+        return false;
+      }
+    }
+
+    // Simulation Mode
+    showToast(
+      lang === 'th' ? '✅ อัปเดตวันหมดอายุสำเร็จ (Sim)' : '✅ User Expiry Updated (Sim)',
+      `ID #${userId} expiry updated to ${new Date(newExpiryTimestamp * 1000).toLocaleDateString()}`,
+      'success'
+    );
+    return true;
+  };
+
+  /**
+   * Admin update user wallet address: adminUpdateUserWallet(uint256 _userId, address _newWallet)
+   */
+  const adminUpdateUserWalletOnChain = async (userId: number, newWallet: string): Promise<boolean> => {
+    if (!ethers.isAddress(newWallet)) {
+      showToast(
+        lang === 'th' ? 'รูปแบบแอดเดรสไม่ถูกต้อง' : 'Invalid Wallet Address',
+        'Please enter a valid BSC 0x address',
+        'info'
+      );
+      return false;
+    }
+
+    if (activeAccount?.isRealWeb3 && typeof window !== 'undefined') {
+      const provider = getBrowserProvider();
+      if (!provider) return false;
+      try {
+        setTxPending(true);
+        const signer = await provider.getSigner();
+        const tx = await adminUpdateUserWalletService(userId, newWallet, signer);
+        setLastTxHash(tx.hash);
+        showToast(
+          lang === 'th' ? 'ส่งคำสั่งย้ายกระเป๋าแล้ว' : 'Update User Wallet Tx Broadcasted',
+          `Tx: ${tx.hash.slice(0, 10)}... (ID #${userId} -> ${newWallet.slice(0, 8)}...)`,
+          'info',
+          undefined,
+          tx.hash
+        );
+        await tx.wait();
+        setTxPending(false);
+        await refreshOnChainData(true);
+        showToast(
+          lang === 'th' ? '✅ ย้ายกระเป๋าสำเร็จ!' : '✅ User Wallet Updated!',
+          `ID #${userId} wallet assigned to ${newWallet.slice(0, 8)}...`,
+          'success',
+          undefined,
+          tx.hash
+        );
+        return true;
+      } catch (err: unknown) {
+        setTxPending(false);
+        const msg = (err as { reason?: string; message?: string })?.reason || (err as { message?: string })?.message || 'Error';
+        showToast(
+          lang === 'th' ? 'เกิดข้อผิดพลาดในการย้ายกระเป๋า' : 'Update Wallet Error',
+          msg.includes('user rejected') ? (lang === 'th' ? 'ผู้ใช้ยกเลิกการทำรายการ' : 'Transaction rejected') : msg.slice(0, 90),
+          'info'
+        );
+        return false;
+      }
+    }
+
+    // Simulation Mode
+    showToast(
+      lang === 'th' ? '✅ ย้ายกระเป๋าสำเร็จ (Sim)' : '✅ User Wallet Updated (Sim)',
+      `ID #${userId} reassigned to ${newWallet.slice(0, 8)}...`,
+      'success'
+    );
+    return true;
+  };
+
+  /**
+   * Admin update placement ID: adminUpdatePlacementId(uint256 _userId, uint256 _newPlacementId)
+   */
+  const adminUpdatePlacementIdOnChain = async (userId: number, newPlacementId: number): Promise<boolean> => {
+    if (userId <= 0 || newPlacementId <= 0) {
+      showToast(
+        lang === 'th' ? 'ข้อมูลไม่ถูกต้อง' : 'Invalid IDs',
+        'User ID and Placement ID must be greater than 0',
+        'info'
+      );
+      return false;
+    }
+
+    if (activeAccount?.isRealWeb3 && typeof window !== 'undefined') {
+      const provider = getBrowserProvider();
+      if (!provider) return false;
+      try {
+        setTxPending(true);
+        const signer = await provider.getSigner();
+        const tx = await adminUpdatePlacementIdService(userId, newPlacementId, signer);
+        setLastTxHash(tx.hash);
+        showToast(
+          lang === 'th' ? 'ส่งคำสั่งย้ายตำแหน่ง Placement แล้ว' : 'Update Placement Tx Broadcasted',
+          `Tx: ${tx.hash.slice(0, 10)}... (ID #${userId} -> Placement #${newPlacementId})`,
+          'info',
+          undefined,
+          tx.hash
+        );
+        await tx.wait();
+        setTxPending(false);
+        await refreshOnChainData(true);
+        showToast(
+          lang === 'th' ? '✅ อัปเดตตำแหน่ง Placement สำเร็จ!' : '✅ Placement Updated!',
+          `ID #${userId} placed under Placement #${newPlacementId}`,
+          'success',
+          undefined,
+          tx.hash
+        );
+        return true;
+      } catch (err: unknown) {
+        setTxPending(false);
+        const msg = (err as { reason?: string; message?: string })?.reason || (err as { message?: string })?.message || 'Error';
+        showToast(
+          lang === 'th' ? 'เกิดข้อผิดพลาดในการอัปเดตตำแหน่ง Placement' : 'Update Placement Error',
+          msg.includes('user rejected') ? (lang === 'th' ? 'ผู้ใช้ยกเลิกการทำรายการ' : 'Transaction rejected') : msg.slice(0, 90),
+          'info'
+        );
+        return false;
+      }
+    }
+
+    // Simulation Mode
+    showToast(
+      lang === 'th' ? '✅ อัปเดตตำแหน่ง Placement สำเร็จ (Sim)' : '✅ Placement Updated (Sim)',
+      `ID #${userId} placed under Placement #${newPlacementId}`,
+      'success'
+    );
+    return true;
+  };
+
+  /**
+   * Admin update sponsor ID: adminUpdateSponsorId(uint256 _userId, uint256 _newSponsorId)
+   */
+  const adminUpdateSponsorIdOnChain = async (userId: number, newSponsorId: number): Promise<boolean> => {
+    if (userId <= 0 || newSponsorId <= 0) {
+      showToast(
+        lang === 'th' ? 'ข้อมูลไม่ถูกต้อง' : 'Invalid IDs',
+        'User ID and Sponsor ID must be greater than 0',
+        'info'
+      );
+      return false;
+    }
+
+    if (activeAccount?.isRealWeb3 && typeof window !== 'undefined') {
+      const provider = getBrowserProvider();
+      if (!provider) return false;
+      try {
+        setTxPending(true);
+        const signer = await provider.getSigner();
+        const tx = await adminUpdateSponsorIdService(userId, newSponsorId, signer);
+        setLastTxHash(tx.hash);
+        showToast(
+          lang === 'th' ? 'ส่งคำสั่งย้ายผู้แนะนำ Sponsor แล้ว' : 'Update Sponsor Tx Broadcasted',
+          `Tx: ${tx.hash.slice(0, 10)}... (ID #${userId} -> Sponsor #${newSponsorId})`,
+          'info',
+          undefined,
+          tx.hash
+        );
+        await tx.wait();
+        setTxPending(false);
+        await refreshOnChainData(true);
+        showToast(
+          lang === 'th' ? '✅ อัปเดตผู้แนะนำ Sponsor สำเร็จ!' : '✅ Sponsor Updated!',
+          `ID #${userId} sponsored by Sponsor #${newSponsorId}`,
+          'success',
+          undefined,
+          tx.hash
+        );
+        return true;
+      } catch (err: unknown) {
+        setTxPending(false);
+        const msg = (err as { reason?: string; message?: string })?.reason || (err as { message?: string })?.message || 'Error';
+        showToast(
+          lang === 'th' ? 'เกิดข้อผิดพลาดในการอัปเดตผู้แนะนำ Sponsor' : 'Update Sponsor Error',
+          msg.includes('user rejected') ? (lang === 'th' ? 'ผู้ใช้ยกเลิกการทำรายการ' : 'Transaction rejected') : msg.slice(0, 90),
+          'info'
+        );
+        return false;
+      }
+    }
+
+    // Simulation Mode
+    showToast(
+      lang === 'th' ? '✅ อัปเดตผู้แนะนำ Sponsor สำเร็จ (Sim)' : '✅ Sponsor Updated (Sim)',
+      `ID #${userId} sponsored by Sponsor #${newSponsorId}`,
       'success'
     );
     return true;
@@ -2493,7 +2787,12 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         claimRewardsCurrentAccount,
         processRebornOnChain,
         spawnGhostPushesOnChain,
+        spawnGhostRank1OnChain,
         adminSetQueueHeadOnChain,
+        adminUpdatePlacementIdOnChain,
+        adminUpdateSponsorIdOnChain,
+        adminUpdateUserExpiryOnChain,
+        adminUpdateUserWalletOnChain,
         setPauseOnChain,
         lockMigrationOnChain,
         emergencyWithdrawOnChain,

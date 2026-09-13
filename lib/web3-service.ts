@@ -2,7 +2,7 @@
  * Web3 Service Layer for WealthLifeCycle Smart Contract on BSC
  * 
  * Interacts with:
- * - WealthLifeCycle Smart Contract: 0xAE3736ECD23DfB6C49b76Ef8548391C1B6fFf7B9
+ * - WealthLifeCycle Smart Contract: 0x5c10DD5fE770E68Fa3F033c63624194498975031
  * - BEP-20 USDT Token: 0x55d398326f99059fF775485246999027B3197955
  * - BSC Mainnet (Chain ID 56)
  */
@@ -303,8 +303,8 @@ export async function fetchLiveContractData(): Promise<OnChainContractData | nul
           withTimeout(contract.RANK1_DURATION(), 2500, BigInt(7 * 86400)),
           withTimeout(contract.getAllGlobalQueueLengths(), 2500, null),
           withTimeout(contract.deployTime(), 2500, BigInt(0)).catch(() => BigInt(0)),
-          withTimeout(contract.getPlatformStats(), 2500, null).catch(() => null),
-          withTimeout(contract.getPlatformAnalytics(0), 2500, null).catch(() => null),
+          withTimeout(typeof contract.getPlatformStats === 'function' ? contract.getPlatformStats() : Promise.resolve(null), 2500, null).catch(() => null),
+          withTimeout(contract.getPlatformAnalytics(), 2500, null).catch(() => null),
         ]);
 
         let rank2QLength = 0;
@@ -336,15 +336,16 @@ export async function fetchLiveContractData(): Promise<OnChainContractData | nul
         if (analyticsRaw) {
           try {
             parsedAnalytics = {
-              totalInvestment: Number(ethers.formatUnits(extractValue(analyticsRaw, 'totalInvestment', 0, BigInt(0)), 18)),
-              queueWaitingCount: Number(extractValue(analyticsRaw, 'queueWaitingCount', 1, 0)),
-              r1Count: Number(extractValue(analyticsRaw, 'r1Count', 2, 0)),
-              r2Count: Number(extractValue(analyticsRaw, 'r2Count', 3, 0)),
-              r3Count: Number(extractValue(analyticsRaw, 'r3Count', 4, 0)),
-              pendingGhosts: Number(extractValue(analyticsRaw, 'pendingGhosts', 5, 0)),
-              totalPendingFunds: Number(ethers.formatUnits(extractValue(analyticsRaw, 'totalPendingFunds', 6, BigInt(0)), 18)),
-              topInvestmentId: Number(extractValue(analyticsRaw, 'topInvestmentId', 7, 0)),
-              topEarnedId: Number(extractValue(analyticsRaw, 'topEarnedId', 8, 0)),
+              totalInvestment: Number(ethers.formatUnits(extractValue(analyticsRaw, '_totalInvestment', 0, extractValue(analyticsRaw, 'totalInvestment', 0, BigInt(0))), 18)),
+              queueWaitingCount: Number(extractValue(analyticsRaw, '_queueWaitingCount', 1, extractValue(analyticsRaw, 'queueWaitingCount', 1, 0))),
+              r1Count: Number(extractValue(analyticsRaw, '_r1Count', 2, extractValue(analyticsRaw, 'r1Count', 2, 0))),
+              r2Count: Number(extractValue(analyticsRaw, '_r2Count', 3, extractValue(analyticsRaw, 'r2Count', 3, 0))),
+              r3Count: Number(extractValue(analyticsRaw, '_r3Count', 4, extractValue(analyticsRaw, 'r3Count', 4, 0))),
+              pendingGhosts: Number(extractValue(analyticsRaw, '_pendingGhosts', 5, extractValue(analyticsRaw, 'pendingGhosts', 5, 0))),
+              totalPendingFunds: Number(ethers.formatUnits(extractValue(analyticsRaw, '_totalPendingFunds', 6, extractValue(analyticsRaw, 'totalPendingFunds', 6, BigInt(0))), 18)),
+              topInvestmentId: Number(extractValue(analyticsRaw, 'topInvestmentId', 7, extractValue(analyticsRaw, '_topEarnedId', 7, 0))),
+              topEarnedId: Number(extractValue(analyticsRaw, '_topEarnedId', 7, extractValue(analyticsRaw, 'topEarnedId', 8, 0))),
+              maxEarnedAmount: Number(ethers.formatUnits(extractValue(analyticsRaw, '_maxEarnedAmount', 8, BigInt(0)), 18)),
             };
           } catch {
             // Ignored if format differs
@@ -1078,6 +1079,64 @@ export async function fetchRank1DurationOnChain(): Promise<number> {
 }
 
 /**
+ * Fetch latest reborn ID for a given user ID: latestRebornId(uint256)
+ */
+export async function fetchLatestRebornIdOnChain(userId: number): Promise<number> {
+  if (userId <= 0) return 0;
+  try {
+    const provider = getBscJsonRpcProvider();
+    const contract = getContractInstance(provider);
+    const res = await contract.latestRebornId(userId);
+    return Number(res);
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * Fetch USDT token address from Smart Contract: usdtToken()
+ */
+export async function fetchUsdtTokenAddressOnChain(): Promise<string> {
+  try {
+    const provider = getBscJsonRpcProvider();
+    const contract = getContractInstance(provider);
+    return await contract.usdtToken();
+  } catch {
+    return USDT_ADDRESS;
+  }
+}
+
+/**
+ * Fetch user pointer in Rank 2 global queue: userRank2Ptr(uint256)
+ */
+export async function fetchUserRank2PtrOnChain(userId: number): Promise<number> {
+  if (userId <= 0) return 0;
+  try {
+    const provider = getBscJsonRpcProvider();
+    const contract = getContractInstance(provider);
+    const res = await contract.userRank2Ptr(userId);
+    return Number(res);
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * Fetch user pointer in Rank 3 global queue: userRank3Ptr(uint256)
+ */
+export async function fetchUserRank3PtrOnChain(userId: number): Promise<number> {
+  if (userId <= 0) return 0;
+  try {
+    const provider = getBscJsonRpcProvider();
+    const contract = getContractInstance(provider);
+    const res = await contract.userRank3Ptr(userId);
+    return Number(res);
+  } catch {
+    return 0;
+  }
+}
+
+/**
  * Fetch complete dashboard data for all IDs owned by a wallet from Smart Contract using getWalletAllData(address _wallet)
  * Returns array of UserDashboardData structs containing ID, sponsorId, isAutoReborn, totalEarned, and downlines across 3 ranks
  */
@@ -1555,6 +1614,7 @@ export async function fetchActiveRank1NodeOnChain(index: number): Promise<number
  * Fetch reborn queue element using rebornQueue(uint256 index)
  */
 export async function fetchRebornQueueItemOnChain(index: number): Promise<{
+  ownerId?: number;
   sponsorId: number;
   ownerWallet: string;
   remainingIds: number;
@@ -1566,12 +1626,20 @@ export async function fetchRebornQueueItemOnChain(index: number): Promise<{
     const contract = getContractInstance(provider);
     const item = await withTimeout(contract.rebornQueue(index), 2500, null);
     if (!item) return null;
+    const ownerId = Number(extractValue(item, 'ownerId', 0, 0));
+    const originalSponsorId = Number(extractValue(item, 'originalSponsorId', 1, extractValue(item, 'sponsorId', 0, 0)));
+    const ownerWallet = String(extractValue(item, 'ownerWallet', 2, extractValue(item, 'ownerWallet', 1, '0x0000000000000000000000000000000000000000')));
+    const remainingIds = Number(extractValue(item, 'remainingIds', 3, extractValue(item, 'remainingIds', 2, 0)));
+    const targetRank = Number(extractValue(item, 'targetRank', 4, extractValue(item, 'targetRank', 3, 1)));
+    const isGhost = Boolean(extractValue(item, 'isGhost', 5, extractValue(item, 'isGhost', 4, false)));
+
     return {
-      sponsorId: Number(extractValue(item, 'sponsorId', 0, 0)),
-      ownerWallet: String(extractValue(item, 'ownerWallet', 1, '0x0000000000000000000000000000000000000000')),
-      remainingIds: Number(extractValue(item, 'remainingIds', 2, 0)),
-      targetRank: Number(extractValue(item, 'targetRank', 3, 1)),
-      isGhost: Boolean(extractValue(item, 'isGhost', 4, false)),
+      ownerId,
+      sponsorId: originalSponsorId,
+      ownerWallet,
+      remainingIds,
+      targetRank,
+      isGhost,
     };
   } catch {
     return null;
@@ -1885,18 +1953,25 @@ export async function fetchPlatformAnalyticsOnChain(periodSeconds: number = 0): 
   try {
     const provider = getBscJsonRpcProvider();
     const contract = getContractInstance(provider);
-    const res = await withTimeout(contract.getPlatformAnalytics(periodSeconds), 3000, null);
+    // Contract getPlatformAnalytics takes no parameters in new ABI
+    let res: unknown = null;
+    try {
+      res = await withTimeout(contract.getPlatformAnalytics(), 3000, null);
+    } catch {
+      res = await withTimeout(contract.getPlatformAnalytics(periodSeconds), 3000, null);
+    }
     if (!res) return null;
     return {
-      totalInvestment: Number(ethers.formatUnits(extractValue(res, 'totalInvestment', 0, BigInt(0)), 18)),
-      queueWaitingCount: Number(extractValue(res, 'queueWaitingCount', 1, 0)),
-      r1Count: Number(extractValue(res, 'r1Count', 2, 0)),
-      r2Count: Number(extractValue(res, 'r2Count', 3, 0)),
-      r3Count: Number(extractValue(res, 'r3Count', 4, 0)),
-      pendingGhosts: Number(extractValue(res, 'pendingGhosts', 5, 0)),
-      totalPendingFunds: Number(ethers.formatUnits(extractValue(res, 'totalPendingFunds', 6, BigInt(0)), 18)),
-      topInvestmentId: Number(extractValue(res, 'topInvestmentId', 7, 0)),
-      topEarnedId: Number(extractValue(res, 'topEarnedId', 8, 0)),
+      totalInvestment: Number(ethers.formatUnits(extractValue(res, '_totalInvestment', 0, extractValue(res, 'totalInvestment', 0, BigInt(0))), 18)),
+      queueWaitingCount: Number(extractValue(res, '_queueWaitingCount', 1, extractValue(res, 'queueWaitingCount', 1, 0))),
+      r1Count: Number(extractValue(res, '_r1Count', 2, extractValue(res, 'r1Count', 2, 0))),
+      r2Count: Number(extractValue(res, '_r2Count', 3, extractValue(res, 'r2Count', 3, 0))),
+      r3Count: Number(extractValue(res, '_r3Count', 4, extractValue(res, 'r3Count', 4, 0))),
+      pendingGhosts: Number(extractValue(res, '_pendingGhosts', 5, extractValue(res, 'pendingGhosts', 5, 0))),
+      totalPendingFunds: Number(ethers.formatUnits(extractValue(res, '_totalPendingFunds', 6, extractValue(res, 'totalPendingFunds', 6, BigInt(0))), 18)),
+      topInvestmentId: Number(extractValue(res, 'topInvestmentId', 7, extractValue(res, '_topEarnedId', 7, 0))),
+      topEarnedId: Number(extractValue(res, '_topEarnedId', 7, extractValue(res, 'topEarnedId', 8, 0))),
+      maxEarnedAmount: Number(ethers.formatUnits(extractValue(res, '_maxEarnedAmount', 8, BigInt(0)), 18)),
     };
   } catch (err) {
     console.warn('fetchPlatformAnalyticsOnChain failed:', err);
@@ -1983,6 +2058,54 @@ export async function adminSetQueueHeadOnChain(
 }
 
 /**
+ * Admin update user expiry timestamp: adminUpdateUserExpiry(uint256 _userId, uint256 _newExpiryTimestamp)
+ */
+export async function adminUpdateUserExpiryOnChain(
+  userId: number,
+  newExpiryTimestamp: number,
+  signer: ethers.ContractRunner
+): Promise<ethers.ContractTransactionResponse> {
+  const contract = getContractInstance(signer);
+  return await contract.adminUpdateUserExpiry(userId, newExpiryTimestamp);
+}
+
+/**
+ * Admin update user wallet address: adminUpdateUserWallet(uint256 _userId, address _newWallet)
+ */
+export async function adminUpdateUserWalletOnChain(
+  userId: number,
+  newWallet: string,
+  signer: ethers.ContractRunner
+): Promise<ethers.ContractTransactionResponse> {
+  const contract = getContractInstance(signer);
+  return await contract.adminUpdateUserWallet(userId, newWallet);
+}
+
+/**
+ * Admin update placement ID: adminUpdatePlacementId(uint256 _userId, uint256 _newPlacementId)
+ */
+export async function adminUpdatePlacementIdOnChain(
+  userId: number,
+  newPlacementId: number,
+  signer: ethers.ContractRunner
+): Promise<ethers.ContractTransactionResponse> {
+  const contract = getContractInstance(signer);
+  return await contract.adminUpdatePlacementId(userId, newPlacementId);
+}
+
+/**
+ * Admin update sponsor ID: adminUpdateSponsorId(uint256 _userId, uint256 _newSponsorId)
+ */
+export async function adminUpdateSponsorIdOnChain(
+  userId: number,
+  newSponsorId: number,
+  signer: ethers.ContractRunner
+): Promise<ethers.ContractTransactionResponse> {
+  const contract = getContractInstance(signer);
+  return await contract.adminUpdateSponsorId(userId, newSponsorId);
+}
+
+/**
  * Admin spawn ghosts: adminSpawnGhostPushes(uint256 rank, uint256 amount)
  */
 export async function adminSpawnGhostPushesOnChain(
@@ -1992,6 +2115,18 @@ export async function adminSpawnGhostPushesOnChain(
 ): Promise<ethers.ContractTransactionResponse> {
   const contract = getContractInstance(signer);
   return await contract.adminSpawnGhostPushes(rank, amount);
+}
+
+/**
+ * Admin spawn ghosts into Rank 1: adminSpawnGhostRank1(uint256 rootId, uint256 amount)
+ */
+export async function adminSpawnGhostRank1OnChain(
+  rootId: number,
+  amount: number,
+  signer: ethers.ContractRunner
+): Promise<ethers.ContractTransactionResponse> {
+  const contract = getContractInstance(signer);
+  return await contract.adminSpawnGhostRank1(rootId, amount);
 }
 
 /**
@@ -2280,6 +2415,17 @@ export async function fetchContractEvents(
             argsObj['amountFormatted'] = `${amtFormatted} USDT`;
           } else if (parsed.name === 'SystemPaused') {
             summary = `System paused state changed to: ${argsObj.isPaused ? 'PAUSED' : 'ACTIVE'}`;
+          } else if (parsed.name === 'UserExpiryUpdated') {
+            const expiryDate = argsObj.newExpiry ? new Date(Number(argsObj.newExpiry) * 1000).toLocaleString() : '';
+            summary = `ID #${argsObj.userId} expiry timestamp manually updated to ${expiryDate} by Admin`;
+          } else if (parsed.name === 'UserWalletUpdated') {
+            const oldW = argsObj.oldWallet ? String(argsObj.oldWallet).slice(0, 8) + '...' : '';
+            const newW = argsObj.newWallet ? String(argsObj.newWallet).slice(0, 8) + '...' : '';
+            summary = `ID #${argsObj.userId} wallet migrated from ${oldW} to ${newW}`;
+          } else if (parsed.name === 'PlacementUpdated') {
+            summary = `ID #${argsObj.userId} placement updated from #${argsObj.oldPlacementId} to #${argsObj.newPlacementId} by Admin`;
+          } else if (parsed.name === 'SponsorUpdated') {
+            summary = `ID #${argsObj.userId} sponsor updated from #${argsObj.oldSponsorId} to #${argsObj.newSponsorId} by Admin`;
           }
 
           parsedLogs.push({

@@ -5,7 +5,7 @@
  * 2. USDT Token Address (BEP-20)
  */
 
-export const CONTRACT_ADDRESS = "0xAE3736ECD23DfB6C49b76Ef8548391C1B6fFf7B9";
+export const CONTRACT_ADDRESS = "0x5c10DD5fE770E68Fa3F033c63624194498975031";
 export const USDT_ADDRESS = "0x55d398326f99059fF775485246999027B3197955";
 export const CONTRACT_OWNER = "0xD350758257Bee9AdB111944b1737d257620e80CE";
 
@@ -36,1392 +36,1684 @@ export const BSC_CONFIG = {
 
 export const CONTRACT_ABI = [
   {
-    "type": "constructor",
     "inputs": [
       {
+        "internalType": "address",
         "name": "_usdtAddress",
-        "type": "address",
-        "internalType": "address"
+        "type": "address"
       },
       {
+        "internalType": "address",
         "name": "_genesisWallet",
-        "type": "address",
-        "internalType": "address"
+        "type": "address"
       },
       {
+        "internalType": "address",
         "name": "_globalPool",
-        "type": "address",
-        "internalType": "address"
+        "type": "address"
       }
     ],
-    "stateMutability": "nonpayable"
+    "stateMutability": "nonpayable",
+    "type": "constructor"
   },
   {
+    "inputs": [],
     "name": "CannotWithdrawMainToken",
-    "type": "error",
-    "inputs": []
+    "type": "error"
   },
   {
+    "inputs": [],
     "name": "IdExpired",
-    "type": "error",
-    "inputs": []
+    "type": "error"
   },
   {
+    "inputs": [],
     "name": "InvalidAddress",
-    "type": "error",
-    "inputs": []
+    "type": "error"
   },
   {
+    "inputs": [],
     "name": "InvalidId",
-    "type": "error",
-    "inputs": []
+    "type": "error"
   },
   {
+    "inputs": [],
     "name": "InvalidRank",
-    "type": "error",
-    "inputs": []
+    "type": "error"
   },
   {
+    "inputs": [],
     "name": "IsPaused",
-    "type": "error",
-    "inputs": []
+    "type": "error"
   },
   {
+    "inputs": [],
+    "name": "MaxDownlines",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "MigrationLocked",
-    "type": "error",
-    "inputs": []
+    "type": "error"
   },
   {
+    "inputs": [],
     "name": "NotOwner",
-    "type": "error",
-    "inputs": []
+    "type": "error"
   },
   {
+    "inputs": [],
     "name": "OutOfBounds",
-    "type": "error",
-    "inputs": []
+    "type": "error"
   },
   {
+    "inputs": [],
     "name": "SponsorNotActive",
-    "type": "error",
-    "inputs": []
+    "type": "error"
   },
   {
+    "inputs": [],
     "name": "TransferFailed",
-    "type": "error",
-    "inputs": []
+    "type": "error"
   },
   {
-    "name": "AutoUpgraded",
-    "type": "event",
+    "anonymous": false,
     "inputs": [
       {
-        "name": "userId",
-        "type": "uint256",
         "indexed": true,
-        "internalType": "uint256"
+        "internalType": "uint256",
+        "name": "userId",
+        "type": "uint256"
       },
       {
+        "indexed": false,
+        "internalType": "uint256",
         "name": "newRank",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
+        "type": "uint256"
       }
     ],
-    "anonymous": false
+    "name": "AutoUpgraded",
+    "type": "event"
   },
   {
-    "name": "IdRenewed",
-    "type": "event",
+    "anonymous": false,
     "inputs": [
       {
+        "indexed": true,
+        "internalType": "uint256",
         "name": "userId",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
+        "type": "uint256"
       },
       {
+        "indexed": false,
+        "internalType": "uint256",
         "name": "newExpiryTime",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
+        "type": "uint256"
       }
     ],
-    "anonymous": false
+    "name": "IdRenewed",
+    "type": "event"
   },
   {
-    "name": "RebornQueued",
-    "type": "event",
+    "anonymous": false,
     "inputs": [
       {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "userId",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "oldPlacementId",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "newPlacementId",
+        "type": "uint256"
+      }
+    ],
+    "name": "PlacementUpdated",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
         "name": "ownerId",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
+        "type": "uint256"
       },
       {
+        "indexed": true,
+        "internalType": "address",
         "name": "wallet",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
+        "type": "address"
       },
       {
+        "indexed": false,
+        "internalType": "uint256",
         "name": "totalIds",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
+        "type": "uint256"
       },
       {
-        "name": "isGhost",
-        "type": "bool",
         "indexed": false,
-        "internalType": "bool"
+        "internalType": "bool",
+        "name": "isGhost",
+        "type": "bool"
       }
     ],
-    "anonymous": false
+    "name": "RebornQueued",
+    "type": "event"
   },
   {
-    "name": "Registered",
-    "type": "event",
+    "anonymous": false,
     "inputs": [
       {
+        "indexed": true,
+        "internalType": "uint256",
         "name": "newId",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
+        "type": "uint256"
       },
       {
+        "indexed": true,
+        "internalType": "address",
         "name": "wallet",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
+        "type": "address"
       },
       {
+        "indexed": false,
+        "internalType": "uint256",
         "name": "sponsorId",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
+        "type": "uint256"
       },
       {
+        "indexed": false,
+        "internalType": "uint256",
         "name": "placementId",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
+        "type": "uint256"
       },
       {
+        "indexed": false,
+        "internalType": "bool",
         "name": "isAutoReborn",
-        "type": "bool",
-        "indexed": false,
-        "internalType": "bool"
+        "type": "bool"
       },
       {
+        "indexed": false,
+        "internalType": "bool",
         "name": "isGhost",
-        "type": "bool",
-        "indexed": false,
-        "internalType": "bool"
+        "type": "bool"
       }
     ],
-    "anonymous": false
+    "name": "Registered",
+    "type": "event"
   },
   {
-    "name": "RewardForfeited",
-    "type": "event",
+    "anonymous": false,
     "inputs": [
       {
+        "indexed": true,
+        "internalType": "uint256",
         "name": "missedUserId",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
+        "type": "uint256"
       },
       {
+        "indexed": true,
+        "internalType": "address",
         "name": "wallet",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
+        "type": "address"
       },
       {
-        "name": "amount",
-        "type": "uint256",
         "indexed": false,
-        "internalType": "uint256"
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
       },
       {
+        "indexed": false,
+        "internalType": "string",
         "name": "reason",
-        "type": "string",
-        "indexed": false,
-        "internalType": "string"
+        "type": "string"
       }
     ],
-    "anonymous": false
+    "name": "RewardForfeited",
+    "type": "event"
   },
   {
-    "name": "RewardPaid",
-    "type": "event",
+    "anonymous": false,
     "inputs": [
       {
-        "name": "wallet",
-        "type": "address",
         "indexed": true,
-        "internalType": "address"
+        "internalType": "address",
+        "name": "wallet",
+        "type": "address"
       },
       {
-        "name": "amount",
-        "type": "uint256",
         "indexed": false,
-        "internalType": "uint256"
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
       },
       {
+        "indexed": false,
+        "internalType": "string",
         "name": "note",
-        "type": "string",
-        "indexed": false,
-        "internalType": "string"
+        "type": "string"
       }
     ],
-    "anonymous": false
+    "name": "RewardPaid",
+    "type": "event"
   },
   {
-    "name": "SystemPaused",
-    "type": "event",
+    "anonymous": false,
     "inputs": [
       {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "userId",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "oldSponsorId",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "newSponsorId",
+        "type": "uint256"
+      }
+    ],
+    "name": "SponsorUpdated",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "bool",
         "name": "isPaused",
-        "type": "bool",
+        "type": "bool"
+      }
+    ],
+    "name": "SystemPaused",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "userId",
+        "type": "uint256"
+      },
+      {
         "indexed": false,
-        "internalType": "bool"
+        "internalType": "uint256",
+        "name": "oldExpiry",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "newExpiry",
+        "type": "uint256"
       }
     ],
-    "anonymous": false
+    "name": "UserExpiryUpdated",
+    "type": "event"
   },
   {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "userId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "oldWallet",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "newWallet",
+        "type": "address"
+      }
+    ],
+    "name": "UserWalletUpdated",
+    "type": "event"
+  },
+  {
+    "inputs": [],
     "name": "RANK1_DURATION",
-    "type": "function",
-    "inputs": [],
     "outputs": [
       {
+        "internalType": "uint256",
         "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
+        "type": "uint256"
       }
     ],
-    "stateMutability": "view"
+    "stateMutability": "view",
+    "type": "function"
   },
   {
+    "inputs": [],
     "name": "activeNodePointer",
-    "type": "function",
-    "inputs": [],
     "outputs": [
       {
+        "internalType": "uint256",
         "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
+        "type": "uint256"
       }
     ],
-    "stateMutability": "view"
+    "stateMutability": "view",
+    "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
     "name": "activeRank1Nodes",
-    "type": "function",
-    "inputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
     "outputs": [
       {
+        "internalType": "uint256",
         "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
+        "type": "uint256"
       }
     ],
-    "stateMutability": "view"
+    "stateMutability": "view",
+    "type": "function"
   },
   {
-    "name": "adminSetQueueHead",
-    "type": "function",
     "inputs": [
       {
+        "internalType": "uint256",
         "name": "rank",
-        "type": "uint256",
-        "internalType": "uint256"
+        "type": "uint256"
       },
       {
+        "internalType": "uint256",
         "name": "newHeadIndex",
-        "type": "uint256",
-        "internalType": "uint256"
+        "type": "uint256"
       }
     ],
+    "name": "adminSetQueueHead",
     "outputs": [],
-    "stateMutability": "nonpayable"
+    "stateMutability": "nonpayable",
+    "type": "function"
   },
   {
-    "name": "adminSpawnGhostPushes",
-    "type": "function",
     "inputs": [
       {
+        "internalType": "uint256",
         "name": "rank",
-        "type": "uint256",
-        "internalType": "uint256"
+        "type": "uint256"
       },
       {
+        "internalType": "uint256",
         "name": "amount",
-        "type": "uint256",
-        "internalType": "uint256"
+        "type": "uint256"
       }
     ],
+    "name": "adminSpawnGhostPushes",
     "outputs": [],
-    "stateMutability": "nonpayable"
+    "stateMutability": "nonpayable",
+    "type": "function"
   },
   {
-    "name": "batchMigrateGlobalQueues",
-    "type": "function",
     "inputs": [
       {
-        "name": "migrations",
-        "type": "tuple[]",
+        "internalType": "uint256",
+        "name": "rootId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "adminSpawnGhostRank1",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_userId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_newPlacementId",
+        "type": "uint256"
+      }
+    ],
+    "name": "adminUpdatePlacementId",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_userId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_newSponsorId",
+        "type": "uint256"
+      }
+    ],
+    "name": "adminUpdateSponsorId",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_userId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_newExpiryTimestamp",
+        "type": "uint256"
+      }
+    ],
+    "name": "adminUpdateUserExpiry",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_userId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "_newWallet",
+        "type": "address"
+      }
+    ],
+    "name": "adminUpdateUserWallet",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
         "components": [
           {
+            "internalType": "uint256",
             "name": "rank",
-            "type": "uint256",
-            "internalType": "uint256"
+            "type": "uint256"
           },
           {
+            "internalType": "uint256",
             "name": "userId",
-            "type": "uint256",
-            "internalType": "uint256"
+            "type": "uint256"
           },
           {
+            "internalType": "bool",
             "name": "isAutoReborn",
-            "type": "bool",
-            "internalType": "bool"
+            "type": "bool"
           },
           {
+            "internalType": "bool",
             "name": "isGhost",
-            "type": "bool",
-            "internalType": "bool"
+            "type": "bool"
           },
           {
+            "internalType": "uint8",
             "name": "slotsFilled",
-            "type": "uint8",
-            "internalType": "uint8"
+            "type": "uint8"
           },
           {
+            "internalType": "uint256[]",
             "name": "downlineUserIds",
-            "type": "uint256[]",
-            "internalType": "uint256[]"
+            "type": "uint256[]"
           }
         ],
-        "internalType": "struct WealthLifecycle.GlobalMigrationData[]"
+        "internalType": "struct WealthLifecycle.GlobalMigrationData[]",
+        "name": "migrations",
+        "type": "tuple[]"
       }
     ],
+    "name": "batchMigrateGlobalQueues",
     "outputs": [],
-    "stateMutability": "nonpayable"
+    "stateMutability": "nonpayable",
+    "type": "function"
   },
   {
-    "name": "batchMigrateUsers",
-    "type": "function",
     "inputs": [
       {
-        "name": "users",
-        "type": "tuple[]",
         "components": [
           {
+            "internalType": "uint256",
             "name": "id",
-            "type": "uint256",
-            "internalType": "uint256"
+            "type": "uint256"
           },
           {
+            "internalType": "address",
             "name": "wallet",
-            "type": "address",
-            "internalType": "address"
+            "type": "address"
           },
           {
+            "internalType": "uint256",
             "name": "sponsorId",
-            "type": "uint256",
-            "internalType": "uint256"
+            "type": "uint256"
           },
           {
+            "internalType": "uint256",
             "name": "placementId",
-            "type": "uint256",
-            "internalType": "uint256"
+            "type": "uint256"
           },
           {
+            "internalType": "bool",
             "name": "isGhost",
-            "type": "bool",
-            "internalType": "bool"
+            "type": "bool"
           },
           {
+            "internalType": "bool",
             "name": "isAutoReborn",
-            "type": "bool",
-            "internalType": "bool"
+            "type": "bool"
           },
           {
+            "internalType": "uint256",
             "name": "totalEarned",
-            "type": "uint256",
-            "internalType": "uint256"
+            "type": "uint256"
           },
           {
+            "internalType": "uint256",
             "name": "expiresAt",
-            "type": "uint256",
-            "internalType": "uint256"
+            "type": "uint256"
           },
           {
-            "name": "downlines",
-            "type": "tuple[]",
             "components": [
               {
+                "internalType": "uint256",
                 "name": "userId",
-                "type": "uint256",
-                "internalType": "uint256"
+                "type": "uint256"
               },
               {
+                "internalType": "bool",
                 "name": "isActive",
-                "type": "bool",
-                "internalType": "bool"
+                "type": "bool"
               },
               {
+                "internalType": "bool",
                 "name": "isAutoReborn",
-                "type": "bool",
-                "internalType": "bool"
+                "type": "bool"
               },
               {
+                "internalType": "bool",
                 "name": "isGhost",
-                "type": "bool",
-                "internalType": "bool"
+                "type": "bool"
               }
             ],
-            "internalType": "struct WealthLifecycle.DownlineMigrationData[]"
+            "internalType": "struct WealthLifecycle.DownlineMigrationData[]",
+            "name": "downlines",
+            "type": "tuple[]"
           }
         ],
-        "internalType": "struct WealthLifecycle.UserMigrationData[]"
+        "internalType": "struct WealthLifecycle.UserMigrationData[]",
+        "name": "users",
+        "type": "tuple[]"
       }
     ],
+    "name": "batchMigrateUsers",
     "outputs": [],
-    "stateMutability": "nonpayable"
+    "stateMutability": "nonpayable",
+    "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "parentId",
+        "type": "uint256"
+      }
+    ],
     "name": "checkParentValid",
-    "type": "function",
-    "inputs": [
-      {
-        "name": "parentId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
     "outputs": [
       {
+        "internalType": "bool",
         "name": "isActive",
-        "type": "bool",
-        "internalType": "bool"
+        "type": "bool"
       },
       {
+        "internalType": "bool",
         "name": "isExpired",
-        "type": "bool",
-        "internalType": "bool"
+        "type": "bool"
       },
       {
+        "internalType": "uint256",
         "name": "downlineCount",
-        "type": "uint256",
-        "internalType": "uint256"
+        "type": "uint256"
       }
     ],
-    "stateMutability": "view"
+    "stateMutability": "view",
+    "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
     "name": "currentHeads",
-    "type": "function",
-    "inputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
     "outputs": [
       {
+        "internalType": "uint256",
         "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
+        "type": "uint256"
       }
     ],
-    "stateMutability": "view"
+    "stateMutability": "view",
+    "type": "function"
   },
   {
+    "inputs": [],
     "name": "deployTime",
-    "type": "function",
-    "inputs": [],
     "outputs": [
       {
+        "internalType": "uint256",
         "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
+        "type": "uint256"
       }
     ],
-    "stateMutability": "view"
+    "stateMutability": "view",
+    "type": "function"
   },
   {
-    "name": "emergencyWithdraw",
-    "type": "function",
     "inputs": [
       {
+        "internalType": "address",
         "name": "_token",
-        "type": "address",
-        "internalType": "address"
+        "type": "address"
       },
       {
+        "internalType": "uint256",
         "name": "_amount",
-        "type": "uint256",
-        "internalType": "uint256"
+        "type": "uint256"
       }
     ],
+    "name": "emergencyWithdraw",
     "outputs": [],
-    "stateMutability": "nonpayable"
+    "stateMutability": "nonpayable",
+    "type": "function"
   },
   {
+    "inputs": [],
     "name": "getAllGlobalQueueLengths",
-    "type": "function",
-    "inputs": [],
     "outputs": [
       {
+        "internalType": "uint256",
         "name": "rank2Length",
-        "type": "uint256",
-        "internalType": "uint256"
+        "type": "uint256"
       },
       {
+        "internalType": "uint256",
         "name": "rank3Length",
-        "type": "uint256",
-        "internalType": "uint256"
+        "type": "uint256"
       }
     ],
-    "stateMutability": "view"
+    "stateMutability": "view",
+    "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "rank",
+        "type": "uint256"
+      }
+    ],
     "name": "getGlobalQueueLength",
-    "type": "function",
-    "inputs": [
-      {
-        "name": "rank",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
     "outputs": [
       {
+        "internalType": "uint256",
         "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
+        "type": "uint256"
       }
     ],
-    "stateMutability": "view"
+    "stateMutability": "view",
+    "type": "function"
   },
   {
-    "name": "getGlobalQueuePaginated",
-    "type": "function",
     "inputs": [
       {
+        "internalType": "uint256",
         "name": "rank",
-        "type": "uint256",
-        "internalType": "uint256"
+        "type": "uint256"
       },
       {
+        "internalType": "uint256",
         "name": "startIdx",
-        "type": "uint256",
-        "internalType": "uint256"
+        "type": "uint256"
       },
       {
+        "internalType": "uint256",
         "name": "limit",
-        "type": "uint256",
-        "internalType": "uint256"
+        "type": "uint256"
       }
     ],
+    "name": "getGlobalQueuePaginated",
     "outputs": [
       {
+        "internalType": "uint256[]",
         "name": "userIds",
-        "type": "uint256[]",
-        "internalType": "uint256[]"
+        "type": "uint256[]"
       },
       {
+        "internalType": "bool[]",
         "name": "isGhostFlags",
-        "type": "bool[]",
-        "internalType": "bool[]"
+        "type": "bool[]"
       },
       {
+        "internalType": "uint8[]",
         "name": "slotsFilled",
-        "type": "uint8[]",
-        "internalType": "uint8[]"
+        "type": "uint8[]"
       }
     ],
-    "stateMutability": "view"
+    "stateMutability": "view",
+    "type": "function"
   },
   {
+    "inputs": [],
     "name": "getPlatformAnalytics",
-    "type": "function",
-    "inputs": [
-      {
-        "name": "periodSeconds",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
     "outputs": [
       {
-        "name": "totalInvestment",
-        "type": "uint256",
-        "internalType": "uint256"
+        "internalType": "uint256",
+        "name": "_totalInvestment",
+        "type": "uint256"
       },
       {
-        "name": "queueWaitingCount",
-        "type": "uint256",
-        "internalType": "uint256"
+        "internalType": "uint256",
+        "name": "_queueWaitingCount",
+        "type": "uint256"
       },
       {
-        "name": "r1Count",
-        "type": "uint256",
-        "internalType": "uint256"
+        "internalType": "uint256",
+        "name": "_r1Count",
+        "type": "uint256"
       },
       {
-        "name": "r2Count",
-        "type": "uint256",
-        "internalType": "uint256"
+        "internalType": "uint256",
+        "name": "_r2Count",
+        "type": "uint256"
       },
       {
-        "name": "r3Count",
-        "type": "uint256",
-        "internalType": "uint256"
+        "internalType": "uint256",
+        "name": "_r3Count",
+        "type": "uint256"
       },
       {
-        "name": "pendingGhosts",
-        "type": "uint256",
-        "internalType": "uint256"
+        "internalType": "uint256",
+        "name": "_pendingGhosts",
+        "type": "uint256"
       },
       {
-        "name": "totalPendingFunds",
-        "type": "uint256",
-        "internalType": "uint256"
+        "internalType": "uint256",
+        "name": "_totalPendingFunds",
+        "type": "uint256"
       },
       {
-        "name": "topInvestmentId",
-        "type": "uint256",
-        "internalType": "uint256"
+        "internalType": "uint256",
+        "name": "_topEarnedId",
+        "type": "uint256"
       },
       {
-        "name": "topEarnedId",
-        "type": "uint256",
-        "internalType": "uint256"
+        "internalType": "uint256",
+        "name": "_maxEarnedAmount",
+        "type": "uint256"
       }
     ],
-    "stateMutability": "view"
+    "stateMutability": "view",
+    "type": "function"
   },
   {
-    "name": "getPlatformStats",
-    "type": "function",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "day1",
-        "type": "tuple",
-        "components": [
-          {
-            "name": "membersCount",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "totalVolume",
-            "type": "uint256",
-            "internalType": "uint256"
-          }
-        ],
-        "internalType": "struct WealthLifecycle.PlatformStat"
-      },
-      {
-        "name": "week1",
-        "type": "tuple",
-        "components": [
-          {
-            "name": "membersCount",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "totalVolume",
-            "type": "uint256",
-            "internalType": "uint256"
-          }
-        ],
-        "internalType": "struct WealthLifecycle.PlatformStat"
-      },
-      {
-        "name": "month1",
-        "type": "tuple",
-        "components": [
-          {
-            "name": "membersCount",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "totalVolume",
-            "type": "uint256",
-            "internalType": "uint256"
-          }
-        ],
-        "internalType": "struct WealthLifecycle.PlatformStat"
-      },
-      {
-        "name": "allTime",
-        "type": "tuple",
-        "components": [
-          {
-            "name": "membersCount",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "totalVolume",
-            "type": "uint256",
-            "internalType": "uint256"
-          }
-        ],
-        "internalType": "struct WealthLifecycle.PlatformStat"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "name": "getTeamTree",
-    "type": "function",
     "inputs": [
       {
+        "internalType": "uint256",
         "name": "_rootId",
-        "type": "uint256",
-        "internalType": "uint256"
+        "type": "uint256"
       }
     ],
+    "name": "getTeamTree",
     "outputs": [
       {
-        "name": "",
-        "type": "tuple[]",
         "components": [
           {
+            "internalType": "uint256",
             "name": "id",
-            "type": "uint256",
-            "internalType": "uint256"
+            "type": "uint256"
           },
           {
+            "internalType": "address",
             "name": "wallet",
-            "type": "address",
-            "internalType": "address"
+            "type": "address"
           },
           {
+            "internalType": "uint256",
             "name": "sponsorId",
-            "type": "uint256",
-            "internalType": "uint256"
+            "type": "uint256"
           },
           {
+            "internalType": "uint256",
             "name": "placementId",
-            "type": "uint256",
-            "internalType": "uint256"
+            "type": "uint256"
           },
           {
+            "internalType": "bool",
             "name": "isGhost",
-            "type": "bool",
-            "internalType": "bool"
+            "type": "bool"
           },
           {
+            "internalType": "bool",
             "name": "isActive",
-            "type": "bool",
-            "internalType": "bool"
+            "type": "bool"
           },
           {
+            "internalType": "bool",
             "name": "isExpired",
-            "type": "bool",
-            "internalType": "bool"
+            "type": "bool"
           },
           {
+            "internalType": "uint256",
             "name": "downlineCount",
-            "type": "uint256",
-            "internalType": "uint256"
+            "type": "uint256"
           }
         ],
-        "internalType": "struct WealthLifecycle.MatrixNodeView[]"
+        "internalType": "struct WealthLifecycle.MatrixNodeView[]",
+        "name": "",
+        "type": "tuple[]"
       }
     ],
-    "stateMutability": "view"
+    "stateMutability": "view",
+    "type": "function"
   },
   {
-    "name": "getWalletAllData",
-    "type": "function",
     "inputs": [
       {
+        "internalType": "address",
         "name": "_wallet",
-        "type": "address",
-        "internalType": "address"
+        "type": "address"
       }
     ],
+    "name": "getWalletAllData",
     "outputs": [
       {
-        "name": "",
-        "type": "tuple[]",
         "components": [
           {
+            "internalType": "uint256",
             "name": "id",
-            "type": "uint256",
-            "internalType": "uint256"
+            "type": "uint256"
           },
           {
+            "internalType": "uint256",
             "name": "sponsorId",
-            "type": "uint256",
-            "internalType": "uint256"
+            "type": "uint256"
           },
           {
+            "internalType": "bool",
             "name": "isAutoReborn",
-            "type": "bool",
-            "internalType": "bool"
+            "type": "bool"
           },
           {
+            "internalType": "uint256",
             "name": "totalEarned",
-            "type": "uint256",
-            "internalType": "uint256"
+            "type": "uint256"
           },
           {
+            "internalType": "uint256",
             "name": "expiresAt",
-            "type": "uint256",
-            "internalType": "uint256"
+            "type": "uint256"
           },
           {
+            "internalType": "bool",
             "name": "isExpired",
-            "type": "bool",
-            "internalType": "bool"
+            "type": "bool"
           },
           {
+            "internalType": "uint256[]",
             "name": "rank1Downlines",
-            "type": "uint256[]",
-            "internalType": "uint256[]"
+            "type": "uint256[]"
           },
           {
+            "internalType": "uint256[]",
             "name": "rank2Downlines",
-            "type": "uint256[]",
-            "internalType": "uint256[]"
+            "type": "uint256[]"
           },
           {
+            "internalType": "uint256[]",
             "name": "rank3Downlines",
-            "type": "uint256[]",
-            "internalType": "uint256[]"
+            "type": "uint256[]"
           },
           {
+            "internalType": "int256",
             "name": "rank2QueueIndex",
-            "type": "int256",
-            "internalType": "int256"
+            "type": "int256"
           },
           {
+            "internalType": "int256",
             "name": "rank3QueueIndex",
-            "type": "int256",
-            "internalType": "int256"
+            "type": "int256"
           }
         ],
-        "internalType": "struct WealthLifecycle.UserDashboardData[]"
+        "internalType": "struct WealthLifecycle.UserDashboardData[]",
+        "name": "",
+        "type": "tuple[]"
       }
     ],
-    "stateMutability": "view"
+    "stateMutability": "view",
+    "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_wallet",
+        "type": "address"
+      }
+    ],
     "name": "getWalletAvailableRank1Nodes",
-    "type": "function",
-    "inputs": [
-      {
-        "name": "_wallet",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
     "outputs": [
       {
+        "internalType": "uint256[]",
         "name": "availableIds",
-        "type": "uint256[]",
-        "internalType": "uint256[]"
+        "type": "uint256[]"
       },
       {
+        "internalType": "uint256[]",
         "name": "downlineCounts",
-        "type": "uint256[]",
-        "internalType": "uint256[]"
+        "type": "uint256[]"
       }
     ],
-    "stateMutability": "view"
+    "stateMutability": "view",
+    "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_wallet",
+        "type": "address"
+      }
+    ],
     "name": "getWalletExpiredIdsAndTotalEarned",
-    "type": "function",
-    "inputs": [
-      {
-        "name": "_wallet",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
     "outputs": [
       {
+        "internalType": "uint256[]",
         "name": "expiredIds",
-        "type": "uint256[]",
-        "internalType": "uint256[]"
+        "type": "uint256[]"
       },
       {
+        "internalType": "uint256[]",
         "name": "earnedAmounts",
-        "type": "uint256[]",
-        "internalType": "uint256[]"
+        "type": "uint256[]"
       }
     ],
-    "stateMutability": "view"
+    "stateMutability": "view",
+    "type": "function"
   },
   {
-    "name": "getWalletTotalEarned",
-    "type": "function",
     "inputs": [
       {
+        "internalType": "address",
         "name": "_wallet",
-        "type": "address",
-        "internalType": "address"
+        "type": "address"
       }
     ],
+    "name": "getWalletTotalEarned",
     "outputs": [
       {
+        "internalType": "uint256",
         "name": "totalEarned",
-        "type": "uint256",
-        "internalType": "uint256"
+        "type": "uint256"
       }
     ],
-    "stateMutability": "view"
+    "stateMutability": "view",
+    "type": "function"
   },
   {
+    "inputs": [],
     "name": "globalPool",
-    "type": "function",
-    "inputs": [],
     "outputs": [
       {
+        "internalType": "address",
         "name": "",
-        "type": "address",
-        "internalType": "address"
+        "type": "address"
       }
     ],
-    "stateMutability": "view"
+    "stateMutability": "view",
+    "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
     "name": "globalQueues",
-    "type": "function",
-    "inputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
     "outputs": [
       {
+        "internalType": "uint256",
         "name": "queueIndex",
-        "type": "uint256",
-        "internalType": "uint256"
+        "type": "uint256"
       },
       {
+        "internalType": "uint256",
         "name": "userId",
-        "type": "uint256",
-        "internalType": "uint256"
+        "type": "uint256"
       },
       {
+        "internalType": "bool",
         "name": "isAutoReborn",
-        "type": "bool",
-        "internalType": "bool"
+        "type": "bool"
       },
       {
+        "internalType": "bool",
         "name": "isGhost",
-        "type": "bool",
-        "internalType": "bool"
+        "type": "bool"
       },
       {
+        "internalType": "uint8",
         "name": "slotsFilled",
-        "type": "uint8",
-        "internalType": "uint8"
+        "type": "uint8"
       },
       {
+        "internalType": "uint256",
         "name": "pendingRebornFunds",
-        "type": "uint256",
-        "internalType": "uint256"
+        "type": "uint256"
       }
     ],
-    "stateMutability": "view"
+    "stateMutability": "view",
+    "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
     "name": "hasReachedRank2",
-    "type": "function",
-    "inputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
     "outputs": [
       {
+        "internalType": "bool",
         "name": "",
-        "type": "bool",
-        "internalType": "bool"
+        "type": "bool"
       }
     ],
-    "stateMutability": "view"
+    "stateMutability": "view",
+    "type": "function"
   },
   {
+    "inputs": [],
     "name": "headRebornIndex",
-    "type": "function",
-    "inputs": [],
     "outputs": [
       {
+        "internalType": "uint256",
         "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
+        "type": "uint256"
       }
     ],
-    "stateMutability": "view"
+    "stateMutability": "view",
+    "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
     "name": "idToWallet",
-    "type": "function",
-    "inputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
     "outputs": [
       {
+        "internalType": "address",
         "name": "",
-        "type": "address",
-        "internalType": "address"
+        "type": "address"
       }
     ],
-    "stateMutability": "view"
+    "stateMutability": "view",
+    "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
     "name": "idTotalEarned",
-    "type": "function",
-    "inputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
     "outputs": [
       {
+        "internalType": "uint256",
         "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
+        "type": "uint256"
       }
     ],
-    "stateMutability": "view"
+    "stateMutability": "view",
+    "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_userId",
+        "type": "uint256"
+      }
+    ],
     "name": "isIdExpired",
-    "type": "function",
-    "inputs": [
-      {
-        "name": "_userId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
     "outputs": [
       {
+        "internalType": "bool",
         "name": "",
-        "type": "bool",
-        "internalType": "bool"
+        "type": "bool"
       }
     ],
-    "stateMutability": "view"
+    "stateMutability": "view",
+    "type": "function"
   },
   {
+    "inputs": [],
     "name": "isMigrationLocked",
-    "type": "function",
-    "inputs": [],
     "outputs": [
       {
+        "internalType": "bool",
         "name": "",
-        "type": "bool",
-        "internalType": "bool"
+        "type": "bool"
       }
     ],
-    "stateMutability": "view"
+    "stateMutability": "view",
+    "type": "function"
   },
   {
+    "inputs": [],
     "name": "lastUserId",
-    "type": "function",
-    "inputs": [],
     "outputs": [
       {
+        "internalType": "uint256",
         "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
+        "type": "uint256"
       }
     ],
-    "stateMutability": "view"
+    "stateMutability": "view",
+    "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "latestRebornId",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
     "name": "lockMigration",
-    "type": "function",
-    "inputs": [],
     "outputs": [],
-    "stateMutability": "nonpayable"
+    "stateMutability": "nonpayable",
+    "type": "function"
   },
   {
+    "inputs": [],
+    "name": "maxEarnedAmount",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
     "name": "owner",
-    "type": "function",
-    "inputs": [],
     "outputs": [
       {
+        "internalType": "address",
         "name": "",
-        "type": "address",
-        "internalType": "address"
+        "type": "address"
       }
     ],
-    "stateMutability": "view"
+    "stateMutability": "view",
+    "type": "function"
   },
   {
+    "inputs": [],
     "name": "paused",
-    "type": "function",
-    "inputs": [],
     "outputs": [
       {
+        "internalType": "bool",
         "name": "",
-        "type": "bool",
-        "internalType": "bool"
+        "type": "bool"
       }
     ],
-    "stateMutability": "view"
+    "stateMutability": "view",
+    "type": "function"
   },
   {
-    "name": "processRebornQueue",
-    "type": "function",
+    "inputs": [],
+    "name": "pendingGhosts",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [
       {
+        "internalType": "uint256",
         "name": "batchSize",
-        "type": "uint256",
-        "internalType": "uint256"
+        "type": "uint256"
       }
     ],
+    "name": "processRebornQueue",
     "outputs": [],
-    "stateMutability": "nonpayable"
+    "stateMutability": "nonpayable",
+    "type": "function"
   },
   {
+    "inputs": [],
+    "name": "queueWaitingCount",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "r1Count",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "r2Count",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "r3Count",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
     "name": "rank1Users",
-    "type": "function",
-    "inputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
     "outputs": [
       {
+        "internalType": "bool",
         "name": "isActive",
-        "type": "bool",
-        "internalType": "bool"
+        "type": "bool"
       },
       {
+        "internalType": "bool",
         "name": "isAutoReborn",
-        "type": "bool",
-        "internalType": "bool"
+        "type": "bool"
       },
       {
+        "internalType": "bool",
         "name": "isGhost",
-        "type": "bool",
-        "internalType": "bool"
+        "type": "bool"
       },
       {
+        "internalType": "uint256",
         "name": "sponsorId",
-        "type": "uint256",
-        "internalType": "uint256"
+        "type": "uint256"
       },
       {
+        "internalType": "uint256",
         "name": "placementId",
-        "type": "uint256",
-        "internalType": "uint256"
+        "type": "uint256"
       },
       {
+        "internalType": "uint256",
         "name": "pendingRebornFunds",
-        "type": "uint256",
-        "internalType": "uint256"
+        "type": "uint256"
       },
       {
+        "internalType": "uint256",
         "name": "expiresAt",
-        "type": "uint256",
-        "internalType": "uint256"
+        "type": "uint256"
       },
       {
+        "internalType": "uint256",
         "name": "createdAt",
-        "type": "uint256",
-        "internalType": "uint256"
+        "type": "uint256"
       }
     ],
-    "stateMutability": "view"
+    "stateMutability": "view",
+    "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
     "name": "rankPrices",
-    "type": "function",
-    "inputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
     "outputs": [
       {
+        "internalType": "uint256",
         "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
+        "type": "uint256"
       }
     ],
-    "stateMutability": "view"
+    "stateMutability": "view",
+    "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
     "name": "rebornQueue",
-    "type": "function",
-    "inputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
     "outputs": [
       {
-        "name": "sponsorId",
-        "type": "uint256",
-        "internalType": "uint256"
+        "internalType": "uint256",
+        "name": "ownerId",
+        "type": "uint256"
       },
       {
+        "internalType": "uint256",
+        "name": "originalSponsorId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
         "name": "ownerWallet",
-        "type": "address",
-        "internalType": "address"
+        "type": "address"
       },
       {
+        "internalType": "uint256",
         "name": "remainingIds",
-        "type": "uint256",
-        "internalType": "uint256"
+        "type": "uint256"
       },
       {
+        "internalType": "uint8",
         "name": "targetRank",
-        "type": "uint8",
-        "internalType": "uint8"
+        "type": "uint8"
       },
       {
+        "internalType": "bool",
         "name": "isGhost",
-        "type": "bool",
-        "internalType": "bool"
+        "type": "bool"
       }
     ],
-    "stateMutability": "view"
+    "stateMutability": "view",
+    "type": "function"
   },
   {
-    "name": "register",
-    "type": "function",
     "inputs": [
       {
+        "internalType": "uint256",
         "name": "sponsorId",
-        "type": "uint256",
-        "internalType": "uint256"
+        "type": "uint256"
       },
       {
+        "internalType": "uint256",
         "name": "parentId",
-        "type": "uint256",
-        "internalType": "uint256"
+        "type": "uint256"
       }
     ],
+    "name": "register",
     "outputs": [],
-    "stateMutability": "nonpayable"
+    "stateMutability": "nonpayable",
+    "type": "function"
   },
   {
-    "name": "renewId",
-    "type": "function",
     "inputs": [
       {
+        "internalType": "uint256",
         "name": "_userId",
-        "type": "uint256",
-        "internalType": "uint256"
+        "type": "uint256"
       }
     ],
+    "name": "renewId",
     "outputs": [],
-    "stateMutability": "nonpayable"
+    "stateMutability": "nonpayable",
+    "type": "function"
   },
   {
-    "name": "setPause",
-    "type": "function",
     "inputs": [
       {
+        "internalType": "bool",
         "name": "_paused",
-        "type": "bool",
-        "internalType": "bool"
+        "type": "bool"
       }
     ],
+    "name": "setPause",
     "outputs": [],
-    "stateMutability": "nonpayable"
+    "stateMutability": "nonpayable",
+    "type": "function"
   },
   {
+    "inputs": [],
     "name": "tailRebornIndex",
-    "type": "function",
-    "inputs": [],
     "outputs": [
       {
+        "internalType": "uint256",
         "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
+        "type": "uint256"
       }
     ],
-    "stateMutability": "view"
+    "stateMutability": "view",
+    "type": "function"
   },
   {
+    "inputs": [],
+    "name": "topEarnedId",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "totalInvestment",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "totalPendingFunds",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
     "name": "usdtToken",
-    "type": "function",
-    "inputs": [],
     "outputs": [
       {
+        "internalType": "contract IERC20",
         "name": "",
-        "type": "address",
-        "internalType": "contract IERC20"
+        "type": "address"
       }
     ],
-    "stateMutability": "view"
+    "stateMutability": "view",
+    "type": "function"
   },
   {
-    "name": "walletToIds",
-    "type": "function",
     "inputs": [
       {
+        "internalType": "uint256",
         "name": "",
-        "type": "address",
-        "internalType": "address"
+        "type": "uint256"
+      }
+    ],
+    "name": "userRank2Ptr",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "userRank3Ptr",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
       },
       {
+        "internalType": "uint256",
         "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
+        "type": "uint256"
       }
     ],
+    "name": "walletToIds",
     "outputs": [
       {
+        "internalType": "uint256",
         "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
+        "type": "uint256"
       }
     ],
-    "stateMutability": "view"
+    "stateMutability": "view",
+    "type": "function"
   }
 ] as const;
 

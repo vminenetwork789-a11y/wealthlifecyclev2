@@ -172,6 +172,7 @@ export interface PlatformAnalyticsData {
   totalPendingFunds: number;
   topInvestmentId: number;
   topEarnedId: number;
+  maxEarnedAmount?: number;
 }
 
 export interface PlacementSearchResult {

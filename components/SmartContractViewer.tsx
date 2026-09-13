@@ -16,6 +16,13 @@ import {
   fetchPlatformAnalyticsOnChain,
   checkParentValidOnChain,
   fetchDeployTimeOnChain,
+  fetchWalletExpiredIdsAndTotalEarnedOnChain,
+  checkIsIdExpiredOnChain,
+  fetchLatestRebornIdOnChain,
+  fetchUserRank2PtrOnChain,
+  fetchUserRank3PtrOnChain,
+  fetchAllGlobalQueueLengthsOnChain,
+  checkHasReachedRank2OnChain,
   type SmartContractEventLog
 } from '../lib/web3-service';
 import { matrixContract } from '../lib/mock-contract';
@@ -53,13 +60,21 @@ import {
   Table,
   FileSpreadsheet,
   CheckCheck,
-  X
+  X,
+  ShieldCheck,
+  AlertTriangle,
+  FileCheck
 } from 'lucide-react';
 import { 
   downloadMysqlDumpFile, 
   generateMysqlDumpSql, 
   MYSQL_SCHEMA_DDL 
 } from '../lib/mysql-export';
+import {
+  runContractAuditSuite,
+  type AuditSuiteReport,
+  type AuditTestResult
+} from '../lib/contract-audit';
 
 const SOLIDITY_CODE = `// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
@@ -68,7 +83,7 @@ pragma solidity ^0.8.20;
  * @title WealthLifeCycle - 3-Rank Non-Stop Matrix Protocol with Ghost Reborn Engine
  * @dev 100% On-Chain Decentralized Matrix on BNB Smart Chain (BEP-20)
  * 
- * Contract Address: 0xAE3736ECD23DfB6C49b76Ef8548391C1B6fFf7B9
+ * Contract Address: 0x5c10DD5fE770E68Fa3F033c63624194498975031
  * USDT Token (BSC): 0x55d398326f99059fF775485246999027B3197955
  * 
  * Compensation Architecture:
@@ -300,11 +315,39 @@ contract WealthLifeCycle {
 }`;
 
 export const SmartContractViewer: React.FC = () => {
-  const { lang, t, lastUserId, getIdTotalEarned, showToast, activeAccount, currentUser, selectedUserId } = useWallet();
+  const { 
+    lang, 
+    t, 
+    lastUserId, 
+    getIdTotalEarned, 
+    showToast, 
+    activeAccount, 
+    currentUser, 
+    selectedUserId,
+    renewIdOnChain,
+    processRebornOnChain,
+    spawnGhostRank1OnChain,
+    spawnGhostPushesOnChain,
+    adminUpdateUserExpiryOnChain,
+    adminUpdateUserWalletOnChain,
+    adminUpdatePlacementIdOnChain,
+    adminUpdateSponsorIdOnChain,
+    adminSetQueueHeadOnChain,
+    lockMigrationOnChain,
+    emergencyWithdrawOnChain,
+    setPauseOnChain,
+    isLiveWeb3
+  } = useWallet();
   const [copiedCode, setCopiedCode] = useState(false);
   const [copiedAddr, setCopiedAddr] = useState(false);
   const [copiedUsdt, setCopiedUsdt] = useState(false);
-  const [activeCategory, setActiveCategory] = useState<'all' | 'read' | 'user' | 'system' | 'events' | 'code'>('all');
+  const [activeCategory, setActiveCategory] = useState<'all' | 'read' | 'write' | 'user' | 'system' | 'events' | 'code' | 'audit'>('all');
+
+  // Contract Audit State
+  const [auditReport, setAuditReport] = useState<AuditSuiteReport | null>(null);
+  const [isAuditing, setIsAuditing] = useState<boolean>(false);
+  const [selectedAuditTestId, setSelectedAuditTestId] = useState<string | null>(null);
+  const [auditFilter, setAuditFilter] = useState<string>('all');
 
   const defaultId = selectedUserId || currentUser?.id || 1;
   const defaultWallet = activeAccount?.address || CONTRACT_OWNER;
@@ -386,6 +429,73 @@ export const SmartContractViewer: React.FC = () => {
   const [queryAnalyticsPeriod, setQueryAnalyticsPeriod] = useState<number>(0);
   const [platformAnalyticsResult, setPlatformAnalyticsResult] = useState<PlatformAnalyticsData | null>(null);
   const [isQueryingAnalytics, setIsQueryingAnalytics] = useState<boolean>(false);
+
+  // Interactive query for isIdExpired(userId)
+  const [queryIsExpiredId, setQueryIsExpiredId] = useState<string>(() => String(defaultId));
+  const [isExpiredResult, setIsExpiredResult] = useState<{ userId: number; isExpired: boolean } | null>(null);
+  const [isQueryingIsExpired, setIsQueryingIsExpired] = useState<boolean>(false);
+
+  // Interactive query for getWalletExpiredIdsAndTotalEarned(wallet)
+  const [queryExpiredWalletAddr, setQueryExpiredWalletAddr] = useState<string>(() => defaultWallet);
+  const [walletExpiredResult, setWalletExpiredResult] = useState<{ wallet: string; expiredIds: number[]; earnedAmounts: number[] } | null>(null);
+  const [isQueryingWalletExpired, setIsQueryingWalletExpired] = useState<boolean>(false);
+
+  // Write Functions Execution State
+  const [writeRenewIdInput, setWriteRenewIdInput] = useState<string>(() => String(defaultId));
+  const [isWritingRenew, setIsWritingRenew] = useState<boolean>(false);
+
+  const [writeProcessRebornBatch, setWriteProcessRebornBatch] = useState<string>('5');
+  const [isWritingProcessReborn, setIsWritingProcessReborn] = useState<boolean>(false);
+
+  const [writeSpawnRank1RootId, setWriteSpawnRank1RootId] = useState<string>('1');
+  const [writeSpawnRank1Amount, setWriteSpawnRank1Amount] = useState<string>('4');
+  const [isWritingSpawnRank1, setIsWritingSpawnRank1] = useState<boolean>(false);
+
+  const [writeSpawnPushRank, setWriteSpawnPushRank] = useState<2 | 3>(2);
+  const [writeSpawnPushAmount, setWriteSpawnPushAmount] = useState<string>('2');
+  const [isWritingSpawnPushes, setIsWritingSpawnPushes] = useState<boolean>(false);
+
+  const [writeUpdateExpiryUserId, setWriteUpdateExpiryUserId] = useState<string>(() => String(defaultId));
+  const [writeUpdateExpiryDays, setWriteUpdateExpiryDays] = useState<string>('7');
+  const [isWritingUpdateExpiry, setIsWritingUpdateExpiry] = useState<boolean>(false);
+
+  const [writeUpdateWalletUserId, setWriteUpdateWalletUserId] = useState<string>(() => String(defaultId));
+  const [writeUpdateWalletAddress, setWriteUpdateWalletAddress] = useState<string>('');
+  const [isWritingUpdateWallet, setIsWritingUpdateWallet] = useState<boolean>(false);
+
+  const [writeUpdatePlacementUserId, setWriteUpdatePlacementUserId] = useState<string>(() => String(defaultId));
+  const [writeUpdatePlacementNewId, setWriteUpdatePlacementNewId] = useState<string>('1');
+  const [isWritingUpdatePlacement, setIsWritingUpdatePlacement] = useState<boolean>(false);
+
+  const [writeUpdateSponsorUserId, setWriteUpdateSponsorUserId] = useState<string>(() => String(defaultId));
+  const [writeUpdateSponsorNewId, setWriteUpdateSponsorNewId] = useState<string>('1');
+  const [isWritingUpdateSponsor, setIsWritingUpdateSponsor] = useState<boolean>(false);
+
+  const [writeQueueHeadRank, setWriteQueueHeadRank] = useState<2 | 3>(2);
+  const [writeQueueHeadIndex, setWriteQueueHeadIndex] = useState<string>('0');
+  const [isWritingQueueHead, setIsWritingQueueHead] = useState<boolean>(false);
+
+  const [isWritingPause, setIsWritingPause] = useState<boolean>(false);
+  const [isWritingLockMigration, setIsWritingLockMigration] = useState<boolean>(false);
+
+  const [writeEmergencyToken, setWriteEmergencyToken] = useState<string>(USDT_ADDRESS);
+  const [writeEmergencyAmount, setWriteEmergencyAmount] = useState<string>('');
+  const [isWritingEmergencyWithdraw, setIsWritingEmergencyWithdraw] = useState<boolean>(false);
+
+  // Interactive query for hasReachedRank2(userId)
+  const [queryHasReachedRank2Id, setQueryHasReachedRank2Id] = useState<string>(() => String(defaultId));
+  const [hasReachedRank2Result, setHasReachedRank2Result] = useState<{ userId: number; reached: boolean } | null>(null);
+  const [isQueryingHasReachedRank2, setIsQueryingHasReachedRank2] = useState<boolean>(false);
+
+  // Interactive query for latestRebornId(userId)
+  const [queryLatestRebornIdInput, setQueryLatestRebornIdInput] = useState<string>(() => String(defaultId));
+  const [latestRebornIdResult, setLatestRebornIdResult] = useState<{ originalId: number; latestId: number } | null>(null);
+  const [isQueryingLatestRebornId, setIsQueryingLatestRebornId] = useState<boolean>(false);
+
+  // Interactive query for userRank2Ptr & userRank3Ptr
+  const [queryUserRankPtrId, setQueryUserRankPtrId] = useState<string>(() => String(defaultId));
+  const [userRankPtrResult, setUserRankPtrResult] = useState<{ userId: number; rank2Ptr: number; rank3Ptr: number } | null>(null);
+  const [isQueryingUserRankPtr, setIsQueryingUserRankPtr] = useState<boolean>(false);
 
   // Contract system state snapshot
   const [contractLiveStats, setContractLiveStats] = useState<{
@@ -536,6 +646,48 @@ export const SmartContractViewer: React.FC = () => {
       showToast('MySQL Sync', msg, 'info');
     } finally {
       setIsSyncingMysql(false);
+    }
+  };
+
+  const handleRunAudit = useCallback(async () => {
+    setIsAuditing(true);
+    try {
+      const report = await runContractAuditSuite();
+      setAuditReport(report);
+      showToast(
+        lang === 'th' ? 'ตรวจสอบสัญญาสำเร็จ' : 'Audit Complete',
+        lang === 'th' ? `คะแนนความถูกต้อง: ${report.complianceScore}% (${report.passed}/${report.totalTests} ผ่าน)` : `Compliance Score: ${report.complianceScore}% (${report.passed}/${report.totalTests} passed)`,
+        report.failed === 0 ? 'success' : 'info'
+      );
+    } catch {
+      showToast('Audit Error', 'Failed to run test suite', 'info');
+    } finally {
+      setIsAuditing(false);
+    }
+  }, [lang, showToast]);
+
+  const handleExportAuditJson = () => {
+    if (!auditReport) return;
+    const blob = new Blob([JSON.stringify(auditReport, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `contract_audit_report_${CONTRACT_ADDRESS.slice(0, 10)}_${Date.now()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast(
+      lang === 'th' ? 'ดาวน์โหลดรายงานการตรวจสอบแล้ว' : 'Audit Report Downloaded',
+      'contract_audit_report.json',
+      'success'
+    );
+  };
+
+  const handleSelectCategory = (tabId: 'all' | 'read' | 'write' | 'user' | 'system' | 'events' | 'code' | 'audit') => {
+    setActiveCategory(tabId);
+    if (tabId === 'audit' && !auditReport && !isAuditing) {
+      handleRunAudit();
     }
   };
 
@@ -786,6 +938,236 @@ export const SmartContractViewer: React.FC = () => {
     }
   };
 
+  const handleQueryIsExpired = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const id = parseInt(queryIsExpiredId.trim(), 10);
+    if (isNaN(id) || id <= 0) {
+      showToast('Invalid ID', 'Please enter a valid user ID', 'info');
+      return;
+    }
+    setIsQueryingIsExpired(true);
+    try {
+      const isExp = await checkIsIdExpiredOnChain(id);
+      setIsExpiredResult({ userId: id, isExpired: isExp });
+      showToast(
+        `isIdExpired(${id})`,
+        isExp ? (lang === 'th' ? `รหัส #${id} หมดอายุแล้ว (Expired)` : `ID #${id} is expired`) : (lang === 'th' ? `รหัส #${id} ยังใช้งานได้ปกติ (Active)` : `ID #${id} is active`),
+        isExp ? 'info' : 'success'
+      );
+    } catch {
+      showToast('Query Failed', `Could not check expiry for ID #${id}`, 'info');
+    } finally {
+      setIsQueryingIsExpired(false);
+    }
+  };
+
+  const handleQueryWalletExpired = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const addr = queryExpiredWalletAddr.trim();
+    if (!addr) {
+      showToast('Invalid Address', 'Please enter a valid wallet address', 'info');
+      return;
+    }
+    setIsQueryingWalletExpired(true);
+    try {
+      const res = await fetchWalletExpiredIdsAndTotalEarnedOnChain(addr);
+      setWalletExpiredResult({ wallet: addr, expiredIds: res.expiredIds, earnedAmounts: res.earnedAmounts });
+      showToast(
+        `getWalletExpiredIdsAndTotalEarned(${addr.slice(0, 6)}...)`,
+        res.expiredIds.length > 0 ? `Found ${res.expiredIds.length} expired IDs` : 'No expired IDs found',
+        'success'
+      );
+    } catch {
+      showToast('Query Failed', `Could not fetch expired IDs for ${addr.slice(0, 6)}...`, 'info');
+    } finally {
+      setIsQueryingWalletExpired(false);
+    }
+  };
+
+  const handleWriteRenewId = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const id = parseInt(writeRenewIdInput.trim(), 10);
+    if (isNaN(id) || id <= 0) {
+      showToast('Invalid ID', 'Please enter a valid user ID', 'info');
+      return;
+    }
+    setIsWritingRenew(true);
+    await renewIdOnChain(id);
+    setIsWritingRenew(false);
+  };
+
+  const handleWriteProcessReborn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const batch = parseInt(writeProcessRebornBatch.trim(), 10) || 5;
+    setIsWritingProcessReborn(true);
+    await processRebornOnChain(batch);
+    setIsWritingProcessReborn(false);
+  };
+
+  const handleWriteSpawnRank1 = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const root = parseInt(writeSpawnRank1RootId.trim(), 10) || 1;
+    const count = parseInt(writeSpawnRank1Amount.trim(), 10) || 4;
+    setIsWritingSpawnRank1(true);
+    await spawnGhostRank1OnChain(root, count);
+    setIsWritingSpawnRank1(false);
+  };
+
+  const handleWriteSpawnPushes = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const count = parseInt(writeSpawnPushAmount.trim(), 10) || 2;
+    setIsWritingSpawnPushes(true);
+    await spawnGhostPushesOnChain(writeSpawnPushRank, count);
+    setIsWritingSpawnPushes(false);
+  };
+
+  const handleWriteUpdateExpiry = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const id = parseInt(writeUpdateExpiryUserId.trim(), 10);
+    const days = parseFloat(writeUpdateExpiryDays.trim());
+    if (isNaN(id) || id <= 0 || isNaN(days) || days <= 0) {
+      showToast('Invalid Input', 'Please enter valid user ID and days', 'info');
+      return;
+    }
+    const newTimestamp = Math.floor(Date.now() / 1000) + Math.floor(days * 86400);
+    setIsWritingUpdateExpiry(true);
+    await adminUpdateUserExpiryOnChain(id, newTimestamp);
+    setIsWritingUpdateExpiry(false);
+  };
+
+  const handleWriteUpdateWallet = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const id = parseInt(writeUpdateWalletUserId.trim(), 10);
+    const w = writeUpdateWalletAddress.trim();
+    if (isNaN(id) || id <= 0 || !w) {
+      showToast('Invalid Input', 'Please enter valid user ID and new address', 'info');
+      return;
+    }
+    setIsWritingUpdateWallet(true);
+    await adminUpdateUserWalletOnChain(id, w);
+    setIsWritingUpdateWallet(false);
+  };
+
+  const handleWriteUpdatePlacement = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const id = parseInt(writeUpdatePlacementUserId.trim(), 10);
+    const newPid = parseInt(writeUpdatePlacementNewId.trim(), 10);
+    if (isNaN(id) || id <= 0 || isNaN(newPid) || newPid <= 0) {
+      showToast('Invalid Input', 'Please enter valid User ID and Placement ID', 'info');
+      return;
+    }
+    setIsWritingUpdatePlacement(true);
+    await adminUpdatePlacementIdOnChain(id, newPid);
+    setIsWritingUpdatePlacement(false);
+  };
+
+  const handleWriteUpdateSponsor = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const id = parseInt(writeUpdateSponsorUserId.trim(), 10);
+    const newSid = parseInt(writeUpdateSponsorNewId.trim(), 10);
+    if (isNaN(id) || id <= 0 || isNaN(newSid) || newSid <= 0) {
+      showToast('Invalid Input', 'Please enter valid User ID and Sponsor ID', 'info');
+      return;
+    }
+    setIsWritingUpdateSponsor(true);
+    await adminUpdateSponsorIdOnChain(id, newSid);
+    setIsWritingUpdateSponsor(false);
+  };
+
+  const handleWriteQueueHead = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const idx = parseInt(writeQueueHeadIndex.trim(), 10);
+    if (isNaN(idx) || idx < 0) {
+      showToast('Invalid Index', 'Please enter a valid head index >= 0', 'info');
+      return;
+    }
+    setIsWritingQueueHead(true);
+    await adminSetQueueHeadOnChain(writeQueueHeadRank, idx);
+    setIsWritingQueueHead(false);
+  };
+
+  const handleWriteTogglePause = async (newPauseState: boolean) => {
+    setIsWritingPause(true);
+    await setPauseOnChain(newPauseState);
+    setIsWritingPause(false);
+  };
+
+  const handleWriteLockMigration = async () => {
+    setIsWritingLockMigration(true);
+    await lockMigrationOnChain();
+    setIsWritingLockMigration(false);
+  };
+
+  const handleWriteEmergencyWithdraw = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const token = writeEmergencyToken.trim();
+    const amountStr = writeEmergencyAmount.trim();
+    if (!token || !amountStr || parseFloat(amountStr) <= 0) {
+      showToast('Invalid Input', 'Please enter valid token address and amount', 'info');
+      return;
+    }
+    setIsWritingEmergencyWithdraw(true);
+    await emergencyWithdrawOnChain(token, amountStr);
+    setIsWritingEmergencyWithdraw(false);
+  };
+
+  const handleQueryHasReachedRank2 = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const id = parseInt(queryHasReachedRank2Id.trim(), 10);
+    if (isNaN(id) || id <= 0) {
+      showToast('Invalid ID', 'Please enter valid user ID', 'info');
+      return;
+    }
+    setIsQueryingHasReachedRank2(true);
+    try {
+      const reached = await checkHasReachedRank2OnChain(id);
+      setHasReachedRank2Result({ userId: id, reached });
+    } catch {
+      showToast('Query Failed', `Could not check Rank 2 status for #${id}`, 'info');
+    } finally {
+      setIsQueryingHasReachedRank2(false);
+    }
+  };
+
+  const handleQueryLatestRebornId = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const id = parseInt(queryLatestRebornIdInput.trim(), 10);
+    if (isNaN(id) || id <= 0) {
+      showToast('Invalid ID', 'Please enter valid user ID', 'info');
+      return;
+    }
+    setIsQueryingLatestRebornId(true);
+    try {
+      const latestId = await fetchLatestRebornIdOnChain(id);
+      setLatestRebornIdResult({ originalId: id, latestId });
+    } catch {
+      showToast('Query Failed', `Could not fetch latest reborn ID for #${id}`, 'info');
+    } finally {
+      setIsQueryingLatestRebornId(false);
+    }
+  };
+
+  const handleQueryUserRankPtr = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const id = parseInt(queryUserRankPtrId.trim(), 10);
+    if (isNaN(id) || id <= 0) {
+      showToast('Invalid ID', 'Please enter valid user ID', 'info');
+      return;
+    }
+    setIsQueryingUserRankPtr(true);
+    try {
+      const [r2Ptr, r3Ptr] = await Promise.all([
+        fetchUserRank2PtrOnChain(id),
+        fetchUserRank3PtrOnChain(id)
+      ]);
+      setUserRankPtrResult({ userId: id, rank2Ptr: r2Ptr, rank3Ptr: r3Ptr });
+    } catch {
+      showToast('Query Failed', `Could not fetch rank queue pointers for #${id}`, 'info');
+    } finally {
+      setIsQueryingUserRankPtr(false);
+    }
+  };
+
   const handleCopyCode = () => {
     try {
       if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
@@ -860,6 +1242,20 @@ export const SmartContractViewer: React.FC = () => {
       descTh: 'ส่งสัญญาณเมื่อรหัสจบวัฏจักร Rank 3 และส่ง 7 รหัส Reborn เข้าสู่คิวสากลอัตโนมัติ',
       descEn: 'Emitted when a node completes Rank 3 and queues 7 Reborn IDs into the automated FIFO queue.',
       color: 'amber'
+    },
+    {
+      name: 'PlacementUpdated',
+      signature: 'PlacementUpdated(uint256 indexed userId, uint256 oldPlacementId, uint256 newPlacementId)',
+      descTh: 'ส่งสัญญาณเมื่อแอดมินอัปเดตหรือย้ายตำแหน่ง Placement ID ของรหัสสมาชิกในผัง',
+      descEn: 'Emitted when the admin updates a user placement node ID in the matrix tree.',
+      color: 'cyan'
+    },
+    {
+      name: 'SponsorUpdated',
+      signature: 'SponsorUpdated(uint256 indexed userId, uint256 oldSponsorId, uint256 newSponsorId)',
+      descTh: 'ส่งสัญญาณเมื่อแอดมินอัปเดตหรือย้ายผู้แนะนำ Sponsor ID ของรหัสสมาชิก',
+      descEn: 'Emitted when the admin updates a user direct sponsor ID.',
+      color: 'indigo'
     },
     {
       name: 'SystemPaused',
@@ -1043,6 +1439,8 @@ export const SmartContractViewer: React.FC = () => {
         <div className="flex items-center gap-1.5 p-1 bg-slate-900 rounded-xl border border-slate-800 flex-wrap">
           {[
             { id: 'all', label: lang === 'th' ? 'ทั้งหมด (All)' : 'All Methods' },
+            { id: 'audit', label: lang === 'th' ? 'ตรวจสอบสัญญา (Audit)' : 'Contract Audit' },
+            { id: 'write', label: lang === 'th' ? 'ธุรกรรม/เขียนสัญญา (Write)' : 'Write Transactions' },
             { id: 'read', label: lang === 'th' ? 'อ่านข้อมูล (Read)' : 'Read Queries' },
             { id: 'user', label: lang === 'th' ? 'ผู้ใช้ & กระเป๋า (User)' : 'User & Wallet' },
             { id: 'system', label: lang === 'th' ? 'ระบบ & สถานะ (System)' : 'System State' },
@@ -1051,13 +1449,15 @@ export const SmartContractViewer: React.FC = () => {
           ].map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveCategory(tab.id as 'all' | 'read' | 'user' | 'system' | 'events' | 'code')}
+              onClick={() => handleSelectCategory(tab.id as 'all' | 'read' | 'write' | 'user' | 'system' | 'events' | 'code' | 'audit')}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
                 activeCategory === tab.id
                   ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
               }`}
             >
+              {tab.id === 'audit' && <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />}
+              {tab.id === 'write' && <Sparkles className="w-3.5 h-3.5 text-purple-400" />}
               {tab.id === 'events' && <Radio className="w-3.5 h-3.5 text-amber-400" />}
               <span>{tab.label}</span>
             </button>
@@ -1065,7 +1465,260 @@ export const SmartContractViewer: React.FC = () => {
         </div>
       </div>
 
-      {/* System State Live Metrics Bar */}
+      {/* Contract Logic Verification & Audit Suite */}
+      {(activeCategory === 'all' || activeCategory === 'audit') && (
+        <div className="p-6 rounded-3xl bg-slate-900/95 border border-emerald-900/40 shadow-2xl space-y-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="w-5 h-5 text-emerald-400" />
+                <h3 className="text-base font-bold text-white">
+                  {lang === 'th' ? 'ชุดตรวจสอบความถูกต้องของระบบ Smart Contract (Logic Audit Suite)' : 'Smart Contract Logic Verification & Audit Suite'}
+                </h3>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  BSC Mainnet
+                </span>
+              </div>
+              <p className="text-xs text-slate-400">
+                {lang === 'th' 
+                  ? 'ตรวจสอบความถูกต้องของการกระจายผลประโยชน์ 3 ระดับ (3-Rank Matrix), กลไกการเกิดใหม่ของ Ghost, และคิวสากล FIFO ตาม ABI'
+                  : 'Audits 3-rank matrix distribution, ghost re-entry triggers, and global FIFO queue prioritization against smart contract ABI.'}
+              </p>
+              <div className="text-[11px] font-mono text-slate-400 pt-0.5">
+                Target: <span className="text-sky-300 font-semibold">{CONTRACT_ADDRESS}</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              {auditReport && (
+                <button
+                  onClick={handleExportAuditJson}
+                  className="px-3 py-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700/60 transition flex items-center gap-1.5"
+                  title="Export audit report as JSON file"
+                >
+                  <Download className="w-3.5 h-3.5 text-sky-400" />
+                  <span>{lang === 'th' ? 'ส่งออกรายงาน JSON' : 'Export JSON'}</span>
+                </button>
+              )}
+              <button
+                onClick={handleRunAudit}
+                disabled={isAuditing}
+                className="px-4 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 shadow-lg shadow-emerald-500/20 transition flex items-center gap-2 disabled:opacity-60"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isAuditing ? 'animate-spin' : ''}`} />
+                <span>
+                  {isAuditing 
+                    ? (lang === 'th' ? 'กำลังตรวจสอบ...' : 'Running Audit...') 
+                    : (lang === 'th' ? 'เริ่มตรวจสอบสัญญา (Run Audit)' : 'Run Contract Audit')}
+                </span>
+              </button>
+            </div>
+          </div>
+
+          {/* Audit Metrics Banner */}
+          {auditReport ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="p-3.5 rounded-2xl bg-slate-950/80 border border-emerald-900/30">
+                  <span className="text-[10px] text-slate-400 block uppercase tracking-wider font-semibold">
+                    {lang === 'th' ? 'คะแนนความถูกต้อง' : 'Compliance Score'}
+                  </span>
+                  <div className="flex items-baseline gap-1.5 mt-1">
+                    <span className="text-2xl font-black text-emerald-400 font-mono">
+                      {auditReport.complianceScore}%
+                    </span>
+                    <span className="text-[10px] text-emerald-500 font-medium">Verified</span>
+                  </div>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800/80">
+                  <span className="text-[10px] text-slate-400 block uppercase tracking-wider font-semibold">
+                    {lang === 'th' ? 'การทดสอบทั้งหมด' : 'Total Test Cases'}
+                  </span>
+                  <div className="flex items-baseline gap-1.5 mt-1">
+                    <span className="text-2xl font-black text-white font-mono">
+                      {auditReport.totalTests}
+                    </span>
+                    <span className="text-[10px] text-slate-500 font-medium">cases</span>
+                  </div>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-slate-950/80 border border-emerald-900/30">
+                  <span className="text-[10px] text-emerald-400/80 block uppercase tracking-wider font-semibold">
+                    {lang === 'th' ? 'ผ่านเกณฑ์ (Passed)' : 'Passed Tests'}
+                  </span>
+                  <div className="flex items-baseline gap-1.5 mt-1">
+                    <span className="text-2xl font-black text-emerald-400 font-mono">
+                      {auditReport.passed}
+                    </span>
+                    <span className="text-[10px] text-emerald-500/70 font-medium">/{auditReport.totalTests}</span>
+                  </div>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800/80">
+                  <span className="text-[10px] text-slate-400 block uppercase tracking-wider font-semibold">
+                    {lang === 'th' ? 'เวลาในการทดสอบ' : 'Execution Time'}
+                  </span>
+                  <div className="flex items-baseline gap-1.5 mt-1">
+                    <span className="text-2xl font-black text-sky-400 font-mono">
+                      {auditReport.durationMs}
+                    </span>
+                    <span className="text-[10px] text-sky-500 font-medium">ms</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Category Filters */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-1 text-xs">
+                {[
+                  { id: 'all', label: lang === 'th' ? 'ทั้งหมด' : 'All', count: auditReport.totalTests },
+                  { id: 'abi_specification', label: 'ABI Specs', count: auditReport.categorySummaries.abi_specification.total },
+                  { id: 'matrix_distribution', label: '3-Rank Matrix', count: auditReport.categorySummaries.matrix_distribution.total },
+                  { id: 'ghost_reentry_triggers', label: 'Ghost Engine', count: auditReport.categorySummaries.ghost_reentry_triggers.total },
+                  { id: 'global_queue_prioritization', label: 'Queue FIFO', count: auditReport.categorySummaries.global_queue_prioritization.total },
+                  { id: 'conservation_of_funds', label: 'Conservation Math', count: auditReport.categorySummaries.conservation_of_funds.total },
+                  { id: 'expiry_and_forfeiture', label: '7-Day Expiry', count: auditReport.categorySummaries.expiry_and_forfeiture.total },
+                ].map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setAuditFilter(tab.id)}
+                    className={`px-2.5 py-1 rounded-lg font-medium whitespace-nowrap transition flex items-center gap-1.5 ${
+                      auditFilter === tab.id
+                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                        : 'bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800'
+                    }`}
+                  >
+                    <span>{tab.label}</span>
+                    <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-800 text-slate-300 font-mono">
+                      {tab.count}
+                    </span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Test Cases Accordion List */}
+              <div className="space-y-2.5">
+                {auditReport.results
+                  .filter((test) => auditFilter === 'all' || test.category === auditFilter)
+                  .map((test) => {
+                    const isExpanded = selectedAuditTestId === test.id;
+                    return (
+                      <div
+                        key={test.id}
+                        className="rounded-2xl bg-slate-950/90 border border-slate-800/90 overflow-hidden transition"
+                      >
+                        <div
+                          onClick={() => setSelectedAuditTestId(isExpanded ? null : test.id)}
+                          className="p-3.5 flex items-center justify-between gap-3 cursor-pointer hover:bg-slate-800/30 transition"
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                              test.status === 'passed' ? 'bg-emerald-400' : 'bg-rose-400'
+                            }`} />
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-800 text-slate-300 border border-slate-700/60 flex-shrink-0">
+                              {test.id}
+                            </span>
+                            <span className="text-xs font-bold text-white truncate">
+                              {test.name}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <span className="text-[10px] font-mono text-slate-500">
+                              {test.durationMs}ms
+                            </span>
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              test.status === 'passed'
+                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                                : 'bg-rose-500/10 text-rose-400 border border-rose-500/30'
+                            }`}>
+                              {test.status === 'passed' ? 'PASSED' : 'FAILED'}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Expanded details */}
+                        {isExpanded && (
+                          <div className="p-4 pt-2 border-t border-slate-800/80 space-y-3 bg-slate-950/60 text-xs">
+                            <p className="text-slate-300 leading-relaxed">
+                              {test.details}
+                            </p>
+
+                            {/* Assertions */}
+                            <div className="space-y-1.5">
+                              <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">
+                                {lang === 'th' ? 'การทดสอบความถูกต้อง (Assertions)' : 'Verification Assertions'}
+                              </span>
+                              <div className="space-y-1">
+                                {test.assertionResults.map((asst, idx) => (
+                                  <div
+                                    key={idx}
+                                    className="p-2 rounded-xl bg-slate-900 border border-slate-800/80 flex items-start justify-between gap-2"
+                                  >
+                                    <div className="flex items-start gap-2">
+                                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 mt-0.5 flex-shrink-0" />
+                                      <span className="text-slate-200 text-[11px] leading-tight">
+                                        {asst.assertion}
+                                      </span>
+                                    </div>
+                                    <div className="text-[10px] font-mono text-right flex-shrink-0">
+                                      <span className="text-slate-400">Exp: </span>
+                                      <span className="text-slate-300">{asst.expected}</span>
+                                      <span className="text-slate-500"> | </span>
+                                      <span className="text-emerald-400 font-semibold">{asst.actual}</span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Execution Logs */}
+                            {test.logs.length > 0 && (
+                              <div className="space-y-1">
+                                <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">
+                                  {lang === 'th' ? 'บันทึกการประมวลผล (Audit Logs)' : 'Audit Execution Logs'}
+                                </span>
+                                <div className="p-2.5 rounded-xl bg-slate-900 font-mono text-[10px] text-slate-300 space-y-0.5 overflow-x-auto border border-slate-800">
+                                  {test.logs.map((log, lIdx) => (
+                                    <div key={lIdx} className="text-slate-400 hover:text-slate-200">
+                                      {log}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
+          ) : (
+            <div className="p-8 rounded-2xl bg-slate-950/60 border border-slate-800 text-center space-y-3">
+              <ShieldCheck className="w-10 h-10 text-emerald-400 mx-auto opacity-80" />
+              <div className="space-y-1">
+                <h4 className="text-sm font-bold text-white">
+                  {lang === 'th' ? 'พร้อมทำการตรวจสอบ Smart Contract' : 'Ready to Run Contract Audit'}
+                </h4>
+                <p className="text-xs text-slate-400 max-w-md mx-auto">
+                  {lang === 'th'
+                    ? 'คลิกปุ่มด้านล่างเพื่อเริ่มการทดสอบตรรกะ 3-Rank, Ghost Re-entry, FIFO Queue, และความถูกต้องตาม Solidity ABI'
+                    : 'Click below to verify 3-rank matrix math, ghost re-entry rules, FIFO queue sequencing, and ABI compliance.'}
+                </p>
+              </div>
+              <button
+                onClick={handleRunAudit}
+                disabled={isAuditing}
+                className="px-5 py-2.5 rounded-xl text-xs font-bold bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-lg shadow-emerald-500/20 transition inline-flex items-center gap-2"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isAuditing ? 'animate-spin' : ''}`} />
+                <span>{lang === 'th' ? 'เริ่มตรวจสอบสัญญาเดี๋ยวนี้' : 'Run Verification Audit Now'}</span>
+              </button>
+            </div>
+          )}
+        </div>
+      )}
       {(activeCategory === 'all' || activeCategory === 'system') && (
         <div className="p-5 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-xl space-y-3">
           <div className="flex items-center justify-between flex-wrap gap-2">
@@ -1979,6 +2632,120 @@ export const SmartContractViewer: React.FC = () => {
               )}
             </div>
 
+            {/* isIdExpired(uint256 userId) */}
+            <div className="p-5 rounded-2xl bg-slate-900/90 border border-red-500/30 hover:border-red-500/50 transition">
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-mono text-xs font-bold text-red-400">
+                  isIdExpired(uint256)
+                </span>
+                <span className="px-2 py-0.5 rounded bg-red-500/20 text-red-300 text-[10px] font-mono font-bold">
+                  view returns (bool)
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mb-3">
+                {lang === 'th'
+                  ? 'ตรวจสอบว่ารหัส User ID นี้หมดอายุ (เกิน 7 วันนับจากรอบล่าสุด) หรือไม่'
+                  : 'Checks whether this User ID is currently expired according to the 7-day rule.'}
+              </p>
+
+              <form onSubmit={handleQueryIsExpired} className="flex gap-2">
+                <input
+                  type="number"
+                  min="1"
+                  placeholder="User ID (e.g. 1)"
+                  value={queryIsExpiredId}
+                  onChange={(e) => setQueryIsExpiredId(e.target.value)}
+                  className="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white font-mono placeholder:text-slate-500 focus:outline-none focus:border-red-500"
+                />
+                <button
+                  type="submit"
+                  disabled={isQueryingIsExpired}
+                  className="px-3.5 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs font-mono transition flex items-center gap-1.5 shrink-0"
+                >
+                  {isQueryingIsExpired ? <Coins className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                  <span>Check</span>
+                </button>
+              </form>
+
+              {isExpiredResult && (
+                <div className={`mt-3 p-3 rounded-xl border font-mono text-xs flex items-center justify-between ${
+                  isExpiredResult.isExpired
+                    ? 'bg-rose-950/40 border-rose-500/40 text-rose-300'
+                    : 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300'
+                }`}>
+                  <span className="text-slate-300">ID #{isExpiredResult.userId} Status:</span>
+                  <span className="font-bold flex items-center gap-1">
+                    {isExpiredResult.isExpired ? (
+                      <>
+                        <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
+                        <span>EXPIRED (หมดอายุ)</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>ACTIVE (ปกติ)</span>
+                      </>
+                    )}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* getWalletExpiredIdsAndTotalEarned(address wallet) */}
+            <div className="p-5 rounded-2xl bg-slate-900/90 border border-orange-500/30 hover:border-orange-500/50 transition">
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-mono text-xs font-bold text-orange-400">
+                  getWalletExpiredIdsAndTotalEarned(address)
+                </span>
+                <span className="px-2 py-0.5 rounded bg-orange-500/20 text-orange-300 text-[10px] font-mono font-bold">
+                  view returns (uint256[], uint256[])
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mb-3">
+                {lang === 'th'
+                  ? 'ดึงรายการรหัสที่หมดอายุทั้งหมดของกระเป๋า พร้อมยอดรายได้สะสมของแต่ละรหัส'
+                  : 'Returns all expired User IDs and their earned amounts for a given wallet address.'}
+              </p>
+
+              <form onSubmit={handleQueryWalletExpired} className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="0x... Wallet Address"
+                  value={queryExpiredWalletAddr}
+                  onChange={(e) => setQueryExpiredWalletAddr(e.target.value)}
+                  className="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-[11px] text-white font-mono placeholder:text-slate-500 focus:outline-none focus:border-orange-500"
+                />
+                <button
+                  type="submit"
+                  disabled={isQueryingWalletExpired}
+                  className="px-3.5 py-2 rounded-xl bg-orange-500 hover:bg-orange-400 text-slate-950 font-bold text-xs font-mono transition flex items-center gap-1.5 shrink-0"
+                >
+                  {isQueryingWalletExpired ? <Coins className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                  <span>Scan</span>
+                </button>
+              </form>
+
+              {walletExpiredResult && (
+                <div className="mt-3 p-3 rounded-xl bg-orange-950/40 border border-orange-500/40 font-mono text-xs space-y-2">
+                  <div className="flex items-center justify-between text-slate-300">
+                    <span>Expired Count:</span>
+                    <span className="text-orange-300 font-bold">{walletExpiredResult.expiredIds.length} IDs</span>
+                  </div>
+                  {walletExpiredResult.expiredIds.length > 0 ? (
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      {walletExpiredResult.expiredIds.map((id, idx) => (
+                        <span key={id} className="px-2 py-0.5 rounded bg-orange-500/20 border border-orange-400/30 text-orange-300 text-[11px]">
+                          #{id} ({walletExpiredResult.earnedAmounts[idx]?.toFixed(1) || 0} USDT)
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="text-slate-400 text-[11px] block">No expired IDs for this wallet</span>
+                  )}
+                </div>
+              )}
+            </div>
+
             {/* 11. deployTime() Info Card */}
             <div className="p-5 rounded-2xl bg-slate-900/90 border border-blue-500/30">
               <div className="flex items-center justify-between mb-2">
@@ -2130,6 +2897,151 @@ export const SmartContractViewer: React.FC = () => {
               )}
             </div>
 
+            {/* 14. hasReachedRank2(uint256 userId) Card */}
+            <div className="p-5 rounded-2xl bg-slate-900/90 border border-indigo-500/30 hover:border-indigo-500/50 transition">
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-mono text-xs font-bold text-indigo-400">
+                  hasReachedRank2(userId)
+                </span>
+                <span className="px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 text-[10px] font-mono font-bold">
+                  view returns (bool)
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mb-3">
+                {lang === 'th'
+                  ? 'ตรวจสอบว่ารหัส User ID นี้เคยเลื่อนขั้นเข้าสู่ Rank 2 แล้วหรือไม่'
+                  : 'Checks if the user has previously reached Rank 2.'}
+              </p>
+              <form onSubmit={handleQueryHasReachedRank2} className="flex gap-2">
+                <input
+                  type="number"
+                  min="1"
+                  placeholder="User ID"
+                  value={queryHasReachedRank2Id}
+                  onChange={(e) => setQueryHasReachedRank2Id(e.target.value)}
+                  className="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white font-mono placeholder:text-slate-500 focus:outline-none focus:border-indigo-500"
+                />
+                <button
+                  type="submit"
+                  disabled={isQueryingHasReachedRank2}
+                  className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs font-mono transition flex items-center gap-1.5 shrink-0"
+                >
+                  {isQueryingHasReachedRank2 ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                  <span>Check</span>
+                </button>
+              </form>
+              {hasReachedRank2Result && (
+                <div className={`mt-3 p-3 rounded-xl border font-mono text-xs flex items-center justify-between ${
+                  hasReachedRank2Result.reached
+                    ? 'bg-indigo-950/40 border-indigo-500/40 text-indigo-300'
+                    : 'bg-slate-950 border-slate-800 text-slate-400'
+                }`}>
+                  <span className="text-slate-400">ID #{hasReachedRank2Result.userId}:</span>
+                  <span className="font-bold flex items-center gap-1">
+                    {hasReachedRank2Result.reached ? (
+                      <>
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                        <span className="text-emerald-300">Reached Rank 2</span>
+                      </>
+                    ) : (
+                      <span>Not Reached Rank 2</span>
+                    )}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* 15. latestRebornId(uint256 userId) Card */}
+            <div className="p-5 rounded-2xl bg-slate-900/90 border border-teal-500/30 hover:border-teal-500/50 transition">
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-mono text-xs font-bold text-teal-400">
+                  latestRebornId(userId)
+                </span>
+                <span className="px-2 py-0.5 rounded bg-teal-500/20 text-teal-300 text-[10px] font-mono font-bold">
+                  view returns (uint256)
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mb-3">
+                {lang === 'th'
+                  ? 'ดึง User ID ล่าสุดที่เกิดจากการ Reborn ต่อเนื่องของรหัสตั้งต้นนี้'
+                  : 'Retrieves the newest reborn ID linked to the original user ID.'}
+              </p>
+              <form onSubmit={handleQueryLatestRebornId} className="flex gap-2">
+                <input
+                  type="number"
+                  min="1"
+                  placeholder="Original User ID"
+                  value={queryLatestRebornIdInput}
+                  onChange={(e) => setQueryLatestRebornIdInput(e.target.value)}
+                  className="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white font-mono placeholder:text-slate-500 focus:outline-none focus:border-teal-500"
+                />
+                <button
+                  type="submit"
+                  disabled={isQueryingLatestRebornId}
+                  className="px-3.5 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs font-mono transition flex items-center gap-1.5 shrink-0"
+                >
+                  {isQueryingLatestRebornId ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                  <span>Check</span>
+                </button>
+              </form>
+              {latestRebornIdResult && (
+                <div className="mt-3 p-3 rounded-xl bg-teal-950/40 border border-teal-500/40 font-mono text-xs flex items-center justify-between text-teal-300">
+                  <span className="text-slate-400">Original ID #{latestRebornIdResult.originalId}:</span>
+                  <span className="font-bold text-emerald-300">
+                    Latest ID: #{latestRebornIdResult.latestId}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* 16. userRank2Ptr & userRank3Ptr Card */}
+            <div className="p-5 rounded-2xl bg-slate-900/90 border border-fuchsia-500/30 hover:border-fuchsia-500/50 transition">
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-mono text-xs font-bold text-fuchsia-400">
+                  userRank2Ptr / userRank3Ptr(id)
+                </span>
+                <span className="px-2 py-0.5 rounded bg-fuchsia-500/20 text-fuchsia-300 text-[10px] font-mono font-bold">
+                  view returns (uint256)
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mb-3">
+                {lang === 'th'
+                  ? 'ตรวจสอบตำแหน่ง Queue Pointer ของรหัสในคิวสากล Rank 2 และ Rank 3'
+                  : 'Queries queue index pointer in global Rank 2 and Rank 3 queues.'}
+              </p>
+              <form onSubmit={handleQueryUserRankPtr} className="flex gap-2">
+                <input
+                  type="number"
+                  min="1"
+                  placeholder="User ID"
+                  value={queryUserRankPtrId}
+                  onChange={(e) => setQueryUserRankPtrId(e.target.value)}
+                  className="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white font-mono placeholder:text-slate-500 focus:outline-none focus:border-fuchsia-500"
+                />
+                <button
+                  type="submit"
+                  disabled={isQueryingUserRankPtr}
+                  className="px-3.5 py-2 rounded-xl bg-fuchsia-600 hover:bg-fuchsia-500 text-white font-bold text-xs font-mono transition flex items-center gap-1.5 shrink-0"
+                >
+                  {isQueryingUserRankPtr ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                  <span>Check</span>
+                </button>
+              </form>
+              {userRankPtrResult && (
+                <div className="mt-3 p-3 rounded-xl bg-fuchsia-950/40 border border-fuchsia-500/40 font-mono text-xs flex items-center justify-between text-fuchsia-300">
+                  <span className="text-slate-400">ID #{userRankPtrResult.userId}:</span>
+                  <div className="flex gap-2 text-xs font-bold">
+                    <span className="px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300">
+                      R2 Ptr: {userRankPtrResult.rank2Ptr}
+                    </span>
+                    <span className="px-2 py-0.5 rounded bg-purple-500/20 text-purple-300">
+                      R3 Ptr: {userRankPtrResult.rank3Ptr}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+
           </div>
 
           {/* 10. getWalletAllData(address _wallet) Full Dashboard Struct Card */}
@@ -2235,6 +3147,546 @@ export const SmartContractViewer: React.FC = () => {
                 )}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Write / State-Modifying Functions Section */}
+      {(activeCategory === 'all' || activeCategory === 'write') && (
+        <div className="p-6 rounded-3xl bg-slate-900/90 border border-purple-500/30 shadow-2xl space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-xl bg-purple-500/20 border border-purple-500/30 text-purple-400">
+                <Sparkles className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+                  {lang === 'th' ? 'ธุรกรรมเขียนสัญญา (State-Modifying & Admin Transactions)' : 'Write & Admin Methods'}
+                  <span className="px-2 py-0.5 rounded-full bg-purple-500/20 border border-purple-500/40 text-purple-300 text-[10px] font-mono font-bold">
+                    {isLiveWeb3 ? 'Live Web3 Connected' : 'Simulated Sandbox'}
+                  </span>
+                </h3>
+                <p className="text-xs text-slate-400">
+                  {lang === 'th'
+                    ? 'เรียกทำธุรกรรมส่งคำสั่งไปยัง Smart Contract บน BSC Mainnet (ต่อ MetaMask/Bitget/Trust หรือจำลองในระบบ)'
+                    : 'Execute on-chain transactions directly against WealthLifeCycle Smart Contract.'}
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-mono text-slate-400">
+                Gas: <span className="text-emerald-400 font-bold">BEP-20 / BNB</span>
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            
+            {/* 1. renewId(uint256 _userId) */}
+            <div className="p-5 rounded-2xl bg-slate-950 border border-emerald-500/30 hover:border-emerald-500/50 transition">
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-mono text-xs font-bold text-emerald-400">
+                  renewId(uint256 _userId)
+                </span>
+                <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-mono font-bold">
+                  write (external)
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mb-3">
+                {lang === 'th'
+                  ? 'ต่ออายุรหัสที่หมดอายุ 7 วันด้วยค่าธรรมเนียม 30 USDT (ใช้ยอด pending หรือ USDT ในกระเป๋า)'
+                  : 'Renews an expired node for another 7-day cycle with 30 USDT fee.'}
+              </p>
+              <form onSubmit={handleWriteRenewId} className="flex gap-2">
+                <input
+                  type="number"
+                  min="1"
+                  placeholder="User ID"
+                  value={writeRenewIdInput}
+                  onChange={(e) => setWriteRenewIdInput(e.target.value)}
+                  className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white font-mono placeholder:text-slate-500 focus:outline-none focus:border-emerald-500"
+                />
+                <button
+                  type="submit"
+                  disabled={isWritingRenew}
+                  className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs font-mono transition flex items-center gap-1.5 shrink-0 disabled:opacity-50"
+                >
+                  {isWritingRenew ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                  <span>Renew</span>
+                </button>
+              </form>
+            </div>
+
+            {/* 2. processRebornQueue(uint256 batchSize) */}
+            <div className="p-5 rounded-2xl bg-slate-950 border border-purple-500/30 hover:border-purple-500/50 transition">
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-mono text-xs font-bold text-purple-400">
+                  processRebornQueue(uint256 batchSize)
+                </span>
+                <span className="px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 text-[10px] font-mono font-bold">
+                  write (external)
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mb-3">
+                {lang === 'th'
+                  ? 'ประมวลผลคิว Reborn อัตโนมัติ (เสก 7 รหัส Ghost เข้าสู่ผัง Rank 1 ต่อรอบ)'
+                  : 'Processes pending reborn items from FIFO queue to spawn 7 ghost clones in Rank 1.'}
+              </p>
+              <form onSubmit={handleWriteProcessReborn} className="flex gap-2">
+                <input
+                  type="number"
+                  min="1"
+                  max="10"
+                  placeholder="Batch (1-10)"
+                  value={writeProcessRebornBatch}
+                  onChange={(e) => setWriteProcessRebornBatch(e.target.value)}
+                  className="w-24 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white font-mono placeholder:text-slate-500 focus:outline-none focus:border-purple-500"
+                />
+                <button
+                  type="submit"
+                  disabled={isWritingProcessReborn}
+                  className="flex-1 px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs font-mono transition flex items-center justify-center gap-1.5 shrink-0 disabled:opacity-50"
+                >
+                  {isWritingProcessReborn ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Layers className="w-4 h-4" />}
+                  <span>Process Queue</span>
+                </button>
+              </form>
+            </div>
+
+            {/* 3. adminSpawnGhostRank1(uint256 rootId, uint256 amount) */}
+            <div className="p-5 rounded-2xl bg-slate-950 border border-pink-500/30 hover:border-pink-500/50 transition">
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-mono text-xs font-bold text-pink-400">
+                  adminSpawnGhostRank1(rootId, amount)
+                </span>
+                <span className="px-2 py-0.5 rounded bg-pink-500/20 text-pink-300 text-[10px] font-mono font-bold">
+                  admin only
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mb-3">
+                {lang === 'th'
+                  ? 'แอดมินเสก Ghost ลงในผัง Rank 1 ใต้ Root ID ที่กำหนด เพื่อเติมเต็มสายงาน'
+                  : 'Admin triggers ghost placements directly into Rank 1 matrix under a target root.'}
+              </p>
+              <form onSubmit={handleWriteSpawnRank1} className="flex gap-2">
+                <input
+                  type="number"
+                  min="1"
+                  placeholder="Root ID"
+                  value={writeSpawnRank1RootId}
+                  onChange={(e) => setWriteSpawnRank1RootId(e.target.value)}
+                  className="w-24 bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-2 text-xs text-white font-mono placeholder:text-slate-500 focus:outline-none focus:border-pink-500"
+                />
+                <input
+                  type="number"
+                  min="1"
+                  max="20"
+                  placeholder="Qty"
+                  value={writeSpawnRank1Amount}
+                  onChange={(e) => setWriteSpawnRank1Amount(e.target.value)}
+                  className="w-16 bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-2 text-xs text-white font-mono placeholder:text-slate-500 focus:outline-none focus:border-pink-500"
+                />
+                <button
+                  type="submit"
+                  disabled={isWritingSpawnRank1}
+                  className="flex-1 px-3 py-2 rounded-xl bg-pink-600 hover:bg-pink-500 text-white font-bold text-xs font-mono transition flex items-center justify-center gap-1.5 shrink-0 disabled:opacity-50"
+                >
+                  {isWritingSpawnRank1 ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                  <span>Spawn R1</span>
+                </button>
+              </form>
+            </div>
+
+            {/* 4. adminSpawnGhostPushes(uint256 rank, uint256 amount) */}
+            <div className="p-5 rounded-2xl bg-slate-950 border border-sky-500/30 hover:border-sky-500/50 transition">
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-mono text-xs font-bold text-sky-400">
+                  adminSpawnGhostPushes(rank, amount)
+                </span>
+                <span className="px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 text-[10px] font-mono font-bold">
+                  admin only
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mb-3">
+                {lang === 'th'
+                  ? 'แอดมินเสก Ghost Slot เข้าสู่คิวสากล Rank 2 หรือ Rank 3 เพื่อเร่งรอบหมุน'
+                  : 'Pushes ghost slots into Rank 2 or Rank 3 global FIFO queue to accelerate payout rotations.'}
+              </p>
+              <form onSubmit={handleWriteSpawnPushes} className="flex gap-2">
+                <select
+                  value={writeSpawnPushRank}
+                  onChange={(e) => setWriteSpawnPushRank(Number(e.target.value) as 2 | 3)}
+                  className="bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-2 text-xs text-white font-mono focus:outline-none focus:border-sky-500"
+                >
+                  <option value={2}>Rank 2</option>
+                  <option value={3}>Rank 3</option>
+                </select>
+                <input
+                  type="number"
+                  min="1"
+                  max="20"
+                  placeholder="Qty"
+                  value={writeSpawnPushAmount}
+                  onChange={(e) => setWriteSpawnPushAmount(e.target.value)}
+                  className="w-16 bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-2 text-xs text-white font-mono placeholder:text-slate-500 focus:outline-none focus:border-sky-500"
+                />
+                <button
+                  type="submit"
+                  disabled={isWritingSpawnPushes}
+                  className="flex-1 px-3 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs font-mono transition flex items-center justify-center gap-1.5 shrink-0 disabled:opacity-50"
+                >
+                  {isWritingSpawnPushes ? <RefreshCw className="w-4 h-4 animate-spin" /> : <ArrowUpRight className="w-4 h-4" />}
+                  <span>Push Queue</span>
+                </button>
+              </form>
+            </div>
+
+            {/* 5. adminUpdateUserExpiry(uint256 _userId, uint256 _newExpiryTimestamp) */}
+            <div className="p-5 rounded-2xl bg-slate-950 border border-amber-500/30 hover:border-amber-500/50 transition">
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-mono text-xs font-bold text-amber-400">
+                  adminUpdateUserExpiry(userId, timestamp)
+                </span>
+                <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-mono font-bold">
+                  admin only
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mb-3">
+                {lang === 'th'
+                  ? 'แอดมินปรับเปลี่ยนวันหมดอายุของ User ID โดยระบุจำนวนวันเพิ่มจากเวลาปัจจุบัน'
+                  : 'Updates user expiry timestamp on-chain with quick day presets.'}
+              </p>
+              <form onSubmit={handleWriteUpdateExpiry} className="space-y-2">
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    min="1"
+                    placeholder="User ID"
+                    value={writeUpdateExpiryUserId}
+                    onChange={(e) => setWriteUpdateExpiryUserId(e.target.value)}
+                    className="w-24 bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-2 text-xs text-white font-mono placeholder:text-slate-500 focus:outline-none focus:border-amber-500"
+                  />
+                  <input
+                    type="number"
+                    min="0.1"
+                    step="0.5"
+                    placeholder="Days"
+                    value={writeUpdateExpiryDays}
+                    onChange={(e) => setWriteUpdateExpiryDays(e.target.value)}
+                    className="w-20 bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-2 text-xs text-white font-mono placeholder:text-slate-500 focus:outline-none focus:border-amber-500"
+                  />
+                  <button
+                    type="submit"
+                    disabled={isWritingUpdateExpiry}
+                    className="flex-1 px-3 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs font-mono transition flex items-center justify-center gap-1.5 shrink-0 disabled:opacity-50"
+                  >
+                    {isWritingUpdateExpiry ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                    <span>Update</span>
+                  </button>
+                </div>
+                <div className="flex items-center gap-1 pt-0.5 text-[10px] font-mono">
+                  <span className="text-slate-500">Presets:</span>
+                  {[3, 7, 14, 30].map((d) => (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => setWriteUpdateExpiryDays(String(d))}
+                      className={`px-2 py-0.5 rounded transition ${
+                        writeUpdateExpiryDays === String(d)
+                          ? 'bg-amber-500 text-slate-950 font-bold'
+                          : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                      }`}
+                    >
+                      +{d}d
+                    </button>
+                  ))}
+                </div>
+              </form>
+            </div>
+
+            {/* 6. adminUpdateUserWallet(uint256 _userId, address _newWallet) */}
+            <div className="p-5 rounded-2xl bg-slate-950 border border-cyan-500/30 hover:border-cyan-500/50 transition">
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-mono text-xs font-bold text-cyan-400">
+                  adminUpdateUserWallet(userId, newWallet)
+                </span>
+                <span className="px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 text-[10px] font-mono font-bold">
+                  admin only
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mb-3">
+                {lang === 'th'
+                  ? 'แอดมินย้ายโอนสิทธิ์ความเป็นเจ้าของ User ID ไปยังกระเป๋าใหม่ (ID Migration)'
+                  : 'Updates the registered recipient wallet for a given User ID.'}
+              </p>
+              <form onSubmit={handleWriteUpdateWallet} className="space-y-2">
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    min="1"
+                    placeholder="User ID"
+                    value={writeUpdateWalletUserId}
+                    onChange={(e) => setWriteUpdateWalletUserId(e.target.value)}
+                    className="w-24 bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-2 text-xs text-white font-mono placeholder:text-slate-500 focus:outline-none focus:border-cyan-500"
+                  />
+                  <input
+                    type="text"
+                    placeholder="0x... New Address"
+                    value={writeUpdateWalletAddress}
+                    onChange={(e) => setWriteUpdateWalletAddress(e.target.value)}
+                    className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-2 text-xs text-white font-mono placeholder:text-slate-500 focus:outline-none focus:border-cyan-500"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={isWritingUpdateWallet}
+                  className="w-full py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs font-mono transition flex items-center justify-center gap-1.5 disabled:opacity-50"
+                >
+                  {isWritingUpdateWallet ? <RefreshCw className="w-4 h-4 animate-spin" /> : <UserCheck className="w-4 h-4" />}
+                  <span>Migrate Wallet</span>
+                </button>
+              </form>
+            </div>
+
+            {/* 6b. adminUpdatePlacementId(uint256 _userId, uint256 _newPlacementId) */}
+            <div className="p-5 rounded-2xl bg-slate-950 border border-teal-500/30 hover:border-teal-500/50 transition">
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-mono text-xs font-bold text-teal-400">
+                  adminUpdatePlacementId(userId, newPlacementId)
+                </span>
+                <span className="px-2 py-0.5 rounded bg-teal-500/20 text-teal-300 text-[10px] font-mono font-bold">
+                  admin only
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mb-3">
+                {lang === 'th'
+                  ? 'แอดมินอัปเดตหรือย้ายตำแหน่ง Placement ID ของรหัสสมาชิกในผังเมทริกซ์'
+                  : 'Updates the placement node ID for a given User ID in the matrix tree.'}
+              </p>
+              <form onSubmit={handleWriteUpdatePlacement} className="space-y-2">
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    min="1"
+                    placeholder="User ID"
+                    value={writeUpdatePlacementUserId}
+                    onChange={(e) => setWriteUpdatePlacementUserId(e.target.value)}
+                    className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-2 text-xs text-white font-mono placeholder:text-slate-500 focus:outline-none focus:border-teal-500"
+                  />
+                  <input
+                    type="number"
+                    min="1"
+                    placeholder="New Placement ID"
+                    value={writeUpdatePlacementNewId}
+                    onChange={(e) => setWriteUpdatePlacementNewId(e.target.value)}
+                    className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-2 text-xs text-white font-mono placeholder:text-slate-500 focus:outline-none focus:border-teal-500"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={isWritingUpdatePlacement}
+                  className="w-full py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs font-mono transition flex items-center justify-center gap-1.5 disabled:opacity-50"
+                >
+                  {isWritingUpdatePlacement ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                  <span>Update Placement</span>
+                </button>
+              </form>
+            </div>
+
+            {/* 6c. adminUpdateSponsorId(uint256 _userId, uint256 _newSponsorId) */}
+            <div className="p-5 rounded-2xl bg-slate-950 border border-sky-500/30 hover:border-sky-500/50 transition">
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-mono text-xs font-bold text-sky-400">
+                  adminUpdateSponsorId(userId, newSponsorId)
+                </span>
+                <span className="px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 text-[10px] font-mono font-bold">
+                  admin only
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mb-3">
+                {lang === 'th'
+                  ? 'แอดมินอัปเดตหรือย้ายผู้แนะนำ Sponsor ID ให้กับรหัสสมาชิก'
+                  : 'Updates the direct sponsor ID for a given User ID.'}
+              </p>
+              <form onSubmit={handleWriteUpdateSponsor} className="space-y-2">
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    min="1"
+                    placeholder="User ID"
+                    value={writeUpdateSponsorUserId}
+                    onChange={(e) => setWriteUpdateSponsorUserId(e.target.value)}
+                    className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-2 text-xs text-white font-mono placeholder:text-slate-500 focus:outline-none focus:border-sky-500"
+                  />
+                  <input
+                    type="number"
+                    min="1"
+                    placeholder="New Sponsor ID"
+                    value={writeUpdateSponsorNewId}
+                    onChange={(e) => setWriteUpdateSponsorNewId(e.target.value)}
+                    className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-2 text-xs text-white font-mono placeholder:text-slate-500 focus:outline-none focus:border-sky-500"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={isWritingUpdateSponsor}
+                  className="w-full py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs font-mono transition flex items-center justify-center gap-1.5 disabled:opacity-50"
+                >
+                  {isWritingUpdateSponsor ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                  <span>Update Sponsor</span>
+                </button>
+              </form>
+            </div>
+
+            {/* 7. adminSetQueueHead(uint256 rank, uint256 newHeadIndex) */}
+            <div className="p-5 rounded-2xl bg-slate-950 border border-indigo-500/30 hover:border-indigo-500/50 transition">
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-mono text-xs font-bold text-indigo-400">
+                  adminSetQueueHead(rank, index)
+                </span>
+                <span className="px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 text-[10px] font-mono font-bold">
+                  admin only
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mb-3">
+                {lang === 'th'
+                  ? 'ปรับตำแหน่ง Head Pointer ของคิวสากล Rank 2 หรือ Rank 3 โดยตรง'
+                  : 'Manually adjusts the head queue pointer for Rank 2 or 3.'}
+              </p>
+              <form onSubmit={handleWriteQueueHead} className="flex gap-2">
+                <select
+                  value={writeQueueHeadRank}
+                  onChange={(e) => setWriteQueueHeadRank(Number(e.target.value) as 2 | 3)}
+                  className="bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-2 text-xs text-white font-mono focus:outline-none focus:border-indigo-500"
+                >
+                  <option value={2}>Rank 2</option>
+                  <option value={3}>Rank 3</option>
+                </select>
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="Head Index"
+                  value={writeQueueHeadIndex}
+                  onChange={(e) => setWriteQueueHeadIndex(e.target.value)}
+                  className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-2 text-xs text-white font-mono placeholder:text-slate-500 focus:outline-none focus:border-indigo-500"
+                />
+                <button
+                  type="submit"
+                  disabled={isWritingQueueHead}
+                  className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs font-mono transition flex items-center gap-1.5 shrink-0 disabled:opacity-50"
+                >
+                  {isWritingQueueHead ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                  <span>Set Head</span>
+                </button>
+              </form>
+            </div>
+
+            {/* 8. setPause(bool _paused) */}
+            <div className="p-5 rounded-2xl bg-slate-950 border border-rose-500/30 hover:border-rose-500/50 transition">
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-mono text-xs font-bold text-rose-400">
+                  setPause(bool _paused)
+                </span>
+                <span className="px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 text-[10px] font-mono font-bold">
+                  admin only
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mb-3">
+                {lang === 'th'
+                  ? 'สวิตช์ฉุกเฉินเปิดหรือระงับการทำงานของสัญญา Smart Contract ชั่วคราว'
+                  : 'Emergency pause / unpause toggle controlling all non-view contract actions.'}
+              </p>
+              <div className="flex items-center gap-2 pt-1">
+                <button
+                  onClick={() => handleWriteTogglePause(true)}
+                  disabled={isWritingPause || Boolean(contractLiveStats?.paused)}
+                  className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 disabled:opacity-40 text-white font-bold text-xs font-mono transition flex items-center justify-center gap-1.5"
+                >
+                  <PauseCircle className="w-4 h-4" />
+                  <span>Pause</span>
+                </button>
+                <button
+                  onClick={() => handleWriteTogglePause(false)}
+                  disabled={isWritingPause || Boolean(!contractLiveStats?.paused)}
+                  className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white font-bold text-xs font-mono transition flex items-center justify-center gap-1.5"
+                >
+                  <PlayCircle className="w-4 h-4" />
+                  <span>Unpause</span>
+                </button>
+              </div>
+            </div>
+
+            {/* 9. emergencyWithdraw(address _token, uint256 _amount) */}
+            <div className="p-5 rounded-2xl bg-slate-950 border border-emerald-500/30 hover:border-emerald-500/50 transition">
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-mono text-xs font-bold text-emerald-400">
+                  emergencyWithdraw(token, amount)
+                </span>
+                <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-mono font-bold">
+                  owner only
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mb-3">
+                {lang === 'th'
+                  ? 'ถอนเหรียญฉุกเฉิน (BEP-20 / USDT) ออกจากสัญญา Smart Contract ไปยังกระเป๋า Contract Owner'
+                  : 'Emergency withdrawal of BEP-20 tokens or USDT held by the contract back to owner.'}
+              </p>
+              <form onSubmit={handleWriteEmergencyWithdraw} className="space-y-2">
+                <input
+                  type="text"
+                  placeholder="Token Address (0x...)"
+                  value={writeEmergencyToken}
+                  onChange={(e) => setWriteEmergencyToken(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-2 text-xs text-white font-mono placeholder:text-slate-500 focus:outline-none focus:border-emerald-500"
+                />
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="Amount (e.g. 10.0)"
+                    value={writeEmergencyAmount}
+                    onChange={(e) => setWriteEmergencyAmount(e.target.value)}
+                    className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-2 text-xs text-white font-mono placeholder:text-slate-500 focus:outline-none focus:border-emerald-500"
+                  />
+                  <button
+                    type="submit"
+                    disabled={isWritingEmergencyWithdraw}
+                    className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs font-mono transition flex items-center gap-1.5 shrink-0 disabled:opacity-50"
+                  >
+                    {isWritingEmergencyWithdraw ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Coins className="w-4 h-4" />}
+                    <span>Withdraw</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            {/* 10. lockMigration() */}
+            <div className="p-5 rounded-2xl bg-slate-950 border border-amber-500/30 hover:border-amber-500/50 transition">
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-mono text-xs font-bold text-amber-400">
+                  lockMigration()
+                </span>
+                <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-mono font-bold">
+                  owner only • permanent
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mb-3">
+                {lang === 'th'
+                  ? 'ปิดระบบย้ายข้อมูล Migration ถาวร เมื่อล็อคแล้วจะไม่สามารถเรียกฟังก์ชัน batchMigrate ได้อีกตลอดไป'
+                  : 'Permanently locks the contract migration feature. Cannot be undone once executed.'}
+              </p>
+              <button
+                onClick={handleWriteLockMigration}
+                disabled={isWritingLockMigration}
+                className="w-full py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs font-mono transition flex items-center justify-center gap-1.5 disabled:opacity-50"
+              >
+                {isWritingLockMigration ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />}
+                <span>Permanently Lock Migration</span>
+              </button>
+            </div>
+
           </div>
         </div>
       )}

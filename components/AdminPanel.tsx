@@ -36,7 +36,12 @@ import {
   Activity,
   Sparkles,
   Layers,
-  Clock
+  Clock,
+  Wallet,
+  Calendar,
+  UserCheck,
+  Network,
+  GitFork
 } from 'lucide-react';
 import { MaintenanceModal } from './MaintenanceModal';
 import { 
@@ -62,12 +67,17 @@ export const AdminPanel: React.FC = () => {
     onChainContractData,
     processRebornOnChain,
     spawnGhostPushesOnChain,
+    spawnGhostRank1OnChain,
     setPauseOnChain,
     lockMigrationOnChain,
     emergencyWithdrawOnChain,
     batchMigrateUsersOnChain,
     batchMigrateGlobalQueuesOnChain,
     adminSetQueueHeadOnChain,
+    adminUpdatePlacementIdOnChain,
+    adminUpdateSponsorIdOnChain,
+    adminUpdateUserExpiryOnChain,
+    adminUpdateUserWalletOnChain,
     renewIdOnChain,
     resetEntireSystem,
     setActiveTab,
@@ -92,6 +102,29 @@ export const AdminPanel: React.FC = () => {
   // Admin Manual ID Renewal state
   const [adminRenewUserId, setAdminRenewUserId] = useState<string>('');
   const [isRenewingId, setIsRenewingId] = useState<boolean>(false);
+
+  // Admin Spawn Ghost Rank 1 state
+  const [ghostRootId, setGhostRootId] = useState<string>('1');
+
+  // Admin Update User Expiry state
+  const [updateExpiryUserId, setUpdateExpiryUserId] = useState<string>('');
+  const [updateExpiryDays, setUpdateExpiryDays] = useState<string>('7');
+  const [isUpdatingExpiry, setIsUpdatingExpiry] = useState<boolean>(false);
+
+  // Admin Update User Wallet state
+  const [updateWalletUserId, setUpdateWalletUserId] = useState<string>('');
+  const [updateWalletNewAddress, setUpdateWalletNewAddress] = useState<string>('');
+  const [isUpdatingWallet, setIsUpdatingWallet] = useState<boolean>(false);
+
+  // Admin Update User Placement state
+  const [updatePlacementUserId, setUpdatePlacementUserId] = useState<string>('');
+  const [updatePlacementNewId, setUpdatePlacementNewId] = useState<string>('1');
+  const [isUpdatingPlacement, setIsUpdatingPlacement] = useState<boolean>(false);
+
+  // Admin Update User Sponsor state
+  const [updateSponsorUserId, setUpdateSponsorUserId] = useState<string>('');
+  const [updateSponsorNewId, setUpdateSponsorNewId] = useState<string>('1');
+  const [isUpdatingSponsor, setIsUpdatingSponsor] = useState<boolean>(false);
 
   // Admin Batch Migrate Global Queues state
   const [queueMigrationJson, setQueueMigrationJson] = useState<string>('');
@@ -239,7 +272,12 @@ export const AdminPanel: React.FC = () => {
   const handleSpawnGhosts = async () => {
     setIsSpawning(true);
     if (isLiveWeb3) {
-      await spawnGhostPushesOnChain(spawnRank, ghostCount);
+      if (spawnRank === 1) {
+        const rootId = parseInt(ghostRootId.trim(), 10) || 1;
+        await spawnGhostRank1OnChain(rootId, ghostCount);
+      } else {
+        await spawnGhostPushesOnChain(spawnRank, ghostCount);
+      }
     } else {
       await new Promise(r => setTimeout(r, 800));
       const result = matrixContract.spawnGhosts(spawnRank, ghostCount, 'Admin Manual Injection');
@@ -252,6 +290,59 @@ export const AdminPanel: React.FC = () => {
       }
     }
     setIsSpawning(false);
+  };
+
+  const handleUpdateExpirySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const uid = parseInt(updateExpiryUserId.trim(), 10);
+    const days = parseFloat(updateExpiryDays.trim());
+    if (isNaN(uid) || uid <= 0 || isNaN(days) || days <= 0) {
+      showToast('Invalid Input', 'Please enter valid user ID and days', 'info');
+      return;
+    }
+    const newTimestamp = Math.floor(Date.now() / 1000) + Math.floor(days * 86400);
+    setIsUpdatingExpiry(true);
+    await adminUpdateUserExpiryOnChain(uid, newTimestamp);
+    setIsUpdatingExpiry(false);
+  };
+
+  const handleUpdateWalletSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const uid = parseInt(updateWalletUserId.trim(), 10);
+    const w = updateWalletNewAddress.trim();
+    if (isNaN(uid) || uid <= 0 || !w) {
+      showToast('Invalid Input', 'Please enter valid user ID and new wallet address', 'info');
+      return;
+    }
+    setIsUpdatingWallet(true);
+    await adminUpdateUserWalletOnChain(uid, w);
+    setIsUpdatingWallet(false);
+  };
+
+  const handleUpdatePlacementSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const uid = parseInt(updatePlacementUserId.trim(), 10);
+    const pid = parseInt(updatePlacementNewId.trim(), 10);
+    if (isNaN(uid) || uid <= 0 || isNaN(pid) || pid <= 0) {
+      showToast('Invalid Input', 'Please enter valid user ID and placement ID', 'info');
+      return;
+    }
+    setIsUpdatingPlacement(true);
+    await adminUpdatePlacementIdOnChain(uid, pid);
+    setIsUpdatingPlacement(false);
+  };
+
+  const handleUpdateSponsorSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const uid = parseInt(updateSponsorUserId.trim(), 10);
+    const sid = parseInt(updateSponsorNewId.trim(), 10);
+    if (isNaN(uid) || uid <= 0 || isNaN(sid) || sid <= 0) {
+      showToast('Invalid Input', 'Please enter valid user ID and sponsor ID', 'info');
+      return;
+    }
+    setIsUpdatingSponsor(true);
+    await adminUpdateSponsorIdOnChain(uid, sid);
+    setIsUpdatingSponsor(false);
   };
 
   const handleTogglePause = async (newPauseState: boolean) => {
@@ -592,6 +683,26 @@ export const AdminPanel: React.FC = () => {
                   ))}
                 </div>
               </div>
+
+              {spawnRank === 1 && (
+                <div>
+                  <div className="flex items-center justify-between text-xs text-slate-300 mb-1.5 font-bold">
+                    <span>{lang === 'th' ? 'Root ID ที่ต้องการให้ผีไปเกาะ (Root Node)' : 'Target Tree Root ID'}</span>
+                    <span className="text-[10px] text-sky-400 font-mono">adminSpawnGhostRank1</span>
+                  </div>
+                  <input
+                    type="number"
+                    min="1"
+                    value={ghostRootId}
+                    onChange={(e) => setGhostRootId(e.target.value)}
+                    placeholder="1"
+                    className="w-full p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 text-xs font-mono text-white placeholder-slate-600 focus:outline-none focus:border-sky-500"
+                  />
+                  <span className="text-[10px] text-slate-300 block mt-1">
+                    {lang === 'th' ? 'ระบบจะค้นหาตำแหน่งว่างใต้ Root ID นี้แล้ววางรหัสผีลงผัง' : 'Ghosts will fill vacant positions under this root node'}
+                  </span>
+                </div>
+              )}
 
               <div>
                 <div className="flex items-center justify-between text-xs text-slate-300 mb-2">
@@ -1248,6 +1359,292 @@ export const AdminPanel: React.FC = () => {
               >
                 {isRenewingId ? <Loader2 className="w-4 h-4 animate-spin" /> : <Clock className="w-4 h-4" />}
                 <span>{lang === 'th' ? `ต่ออายุรหัส #${adminRenewUserId || '?'} (+7 วัน)` : `Renew ID #${adminRenewUserId || '?'} (+7 Days)`}</span>
+              </button>
+            </form>
+          </div>
+        </div>
+
+      </div>
+
+      {/* Admin User Expiry & Wallet Management (Smart Contract Methods) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        {/* Update User Expiry (adminUpdateUserExpiry) */}
+        <div className="p-6 sm:p-7 rounded-3xl bg-slate-900/90 border border-amber-500/40 shadow-xl flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300 flex items-center justify-center font-bold">
+                  <Calendar className="w-4 h-4" />
+                </div>
+                <h3 className="text-base sm:text-lg font-bold text-white">
+                  {lang === 'th' ? 'ปรับวันหมดอายุ (adminUpdateUserExpiry)' : 'Update User Expiry Date'}
+                </h3>
+              </div>
+              <span className="text-xs font-mono font-bold text-amber-400">
+                Owner Only
+              </span>
+            </div>
+
+            <p className="text-xs text-slate-300 leading-relaxed mb-4">
+              {lang === 'th'
+                ? 'ปรับแก้เวลาหมดอายุ (expireAt) ของรหัสสมาชิกโดยตรง กำหนดจำนวนวันนับจากปัจจุบัน'
+                : 'Directly modify the expireAt timestamp for any user ID on the smart contract.'}
+            </p>
+
+            <form onSubmit={handleUpdateExpirySubmit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-slate-300 block mb-1.5 font-bold">
+                    {lang === 'th' ? 'รหัสสมาชิก (User ID)' : 'User ID'}
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={updateExpiryUserId}
+                    onChange={(e) => setUpdateExpiryUserId(e.target.value)}
+                    placeholder="e.g. 1"
+                    className="w-full p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 text-xs font-mono text-white placeholder-slate-600 focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs text-slate-300 block mb-1.5 font-bold">
+                    {lang === 'th' ? 'จำนวนวัน (นับจากนี้)' : 'Lifespan (Days from now)'}
+                  </label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    min="0.1"
+                    value={updateExpiryDays}
+                    onChange={(e) => setUpdateExpiryDays(e.target.value)}
+                    placeholder="7"
+                    className="w-full p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 text-xs font-mono text-white placeholder-slate-600 focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[10px] text-slate-400">{lang === 'th' ? 'ปุ่มลัด:' : 'Quick set:'}</span>
+                {[
+                  { label: '3 วัน', val: '3' },
+                  { label: '7 วัน (+1 รอบ)', val: '7' },
+                  { label: '14 วัน (+2 รอบ)', val: '14' },
+                  { label: '30 วัน (1 เดือน)', val: '30' }
+                ].map(item => (
+                  <button
+                    key={item.val}
+                    type="button"
+                    onClick={() => setUpdateExpiryDays(item.val)}
+                    className="px-2 py-0.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-mono"
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                type="submit"
+                disabled={isUpdatingExpiry || txPending || !updateExpiryUserId || !updateExpiryDays}
+                className="w-full py-3 rounded-2xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition disabled:opacity-50 shadow-lg shadow-amber-950/40"
+              >
+                {isUpdatingExpiry ? <Loader2 className="w-4 h-4 animate-spin" /> : <Calendar className="w-4 h-4" />}
+                <span>{lang === 'th' ? `บันทึกวันหมดอายุรหัส #${updateExpiryUserId || '?'} (+${updateExpiryDays} วัน)` : `Set Expiry for #${updateExpiryUserId || '?'} (+${updateExpiryDays}d)`}</span>
+              </button>
+            </form>
+          </div>
+        </div>
+
+        {/* Update User Wallet (adminUpdateUserWallet) */}
+        <div className="p-6 sm:p-7 rounded-3xl bg-slate-900/90 border border-purple-500/40 shadow-xl flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-purple-500/20 border border-purple-500/40 text-purple-300 flex items-center justify-center font-bold">
+                  <Wallet className="w-4 h-4" />
+                </div>
+                <h3 className="text-base sm:text-lg font-bold text-white">
+                  {lang === 'th' ? 'ย้ายกระเป๋าสมาชิก (adminUpdateUserWallet)' : 'Update User Wallet Address'}
+                </h3>
+              </div>
+              <span className="text-xs font-mono font-bold text-purple-400">
+                Owner Only
+              </span>
+            </div>
+
+            <p className="text-xs text-slate-300 leading-relaxed mb-4">
+              {lang === 'th'
+                ? 'แก้ไขหรือโอนย้ายกระเป๋า Address ผู้ครอบครองรหัสสมาชิกในสัญญา Smart Contract'
+                : 'Reassign or transfer the ownership wallet of a user ID directly in the contract state.'}
+            </p>
+
+            <form onSubmit={handleUpdateWalletSubmit} className="space-y-4">
+              <div>
+                <label className="text-xs text-slate-300 block mb-1.5 font-bold">
+                  {lang === 'th' ? 'รหัสสมาชิกที่ต้องการเปลี่ยน (User ID)' : 'Target User ID'}
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={updateWalletUserId}
+                  onChange={(e) => setUpdateWalletUserId(e.target.value)}
+                  placeholder="e.g. 2"
+                  className="w-full p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 text-xs font-mono text-white placeholder-slate-600 focus:outline-none focus:border-purple-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs text-slate-300 block mb-1.5 font-bold">
+                  {lang === 'th' ? 'ที่อยู่กระเป๋าใหม่ (New Wallet Address)' : 'New Wallet Address (0x...)'}
+                </label>
+                <input
+                  type="text"
+                  value={updateWalletNewAddress}
+                  onChange={(e) => setUpdateWalletNewAddress(e.target.value)}
+                  placeholder="0x..."
+                  className="w-full p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 text-xs font-mono text-white placeholder-slate-600 focus:outline-none focus:border-purple-500"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={isUpdatingWallet || txPending || !updateWalletUserId || !updateWalletNewAddress}
+                className="w-full py-3 rounded-2xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition disabled:opacity-50 shadow-lg shadow-purple-950/40"
+              >
+                {isUpdatingWallet ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserCheck className="w-4 h-4" />}
+                <span>{lang === 'th' ? `ยืนยันย้ายกระเป๋ารหัส #${updateWalletUserId || '?'}` : `Update Wallet for #${updateWalletUserId || '?'}`}</span>
+              </button>
+            </form>
+          </div>
+        </div>
+
+        {/* Update User Placement (adminUpdatePlacementId) */}
+        <div className="p-6 sm:p-7 rounded-3xl bg-slate-900/90 border border-teal-500/40 shadow-xl flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-teal-500/20 border border-teal-500/40 text-teal-300 flex items-center justify-center font-bold">
+                  <Network className="w-4 h-4" />
+                </div>
+                <h3 className="text-base sm:text-lg font-bold text-white">
+                  {lang === 'th' ? 'ย้ายตำแหน่งผัง (adminUpdatePlacementId)' : 'Update Matrix Placement ID'}
+                </h3>
+              </div>
+              <span className="text-xs font-mono font-bold text-teal-400">
+                Owner Only
+              </span>
+            </div>
+
+            <p className="text-xs text-slate-300 leading-relaxed mb-4">
+              {lang === 'th'
+                ? 'แก้ไขหรือปรับเปลี่ยนตำแหน่ง Placement Node ID ของรหัสสมาชิกในผังต้นไม้เมทริกซ์'
+                : 'Directly modify the parent placement node ID for a given user in the smart contract matrix tree.'}
+            </p>
+
+            <form onSubmit={handleUpdatePlacementSubmit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-slate-300 block mb-1.5 font-bold">
+                    {lang === 'th' ? 'รหัสสมาชิก (User ID)' : 'User ID'}
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={updatePlacementUserId}
+                    onChange={(e) => setUpdatePlacementUserId(e.target.value)}
+                    placeholder="e.g. 5"
+                    className="w-full p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 text-xs font-mono text-white placeholder-slate-600 focus:outline-none focus:border-teal-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs text-slate-300 block mb-1.5 font-bold">
+                    {lang === 'th' ? 'ตำแหน่งใหม่ (New Placement ID)' : 'New Placement ID'}
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={updatePlacementNewId}
+                    onChange={(e) => setUpdatePlacementNewId(e.target.value)}
+                    placeholder="1"
+                    className="w-full p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 text-xs font-mono text-white placeholder-slate-600 focus:outline-none focus:border-teal-500"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isUpdatingPlacement || txPending || !updatePlacementUserId || !updatePlacementNewId}
+                className="w-full py-3 rounded-2xl bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition disabled:opacity-50 shadow-lg shadow-teal-950/40"
+              >
+                {isUpdatingPlacement ? <Loader2 className="w-4 h-4 animate-spin" /> : <Network className="w-4 h-4" />}
+                <span>{lang === 'th' ? `ยืนยันย้ายตำแหน่ง Placement #${updatePlacementUserId || '?'} -> #${updatePlacementNewId || '?'}` : `Update Placement #${updatePlacementUserId || '?'} -> #${updatePlacementNewId || '?'}`}</span>
+              </button>
+            </form>
+          </div>
+        </div>
+
+        {/* Update User Sponsor (adminUpdateSponsorId) */}
+        <div className="p-6 sm:p-7 rounded-3xl bg-slate-900/90 border border-sky-500/40 shadow-xl flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-sky-500/20 border border-sky-500/40 text-sky-300 flex items-center justify-center font-bold">
+                  <GitFork className="w-4 h-4" />
+                </div>
+                <h3 className="text-base sm:text-lg font-bold text-white">
+                  {lang === 'th' ? 'ย้ายผู้แนะนำ (adminUpdateSponsorId)' : 'Update Direct Sponsor ID'}
+                </h3>
+              </div>
+              <span className="text-xs font-mono font-bold text-sky-400">
+                Owner Only
+              </span>
+            </div>
+
+            <p className="text-xs text-slate-300 leading-relaxed mb-4">
+              {lang === 'th'
+                ? 'แก้ไขหรือปรับเปลี่ยน Sponsor ID (ผู้แนะนำตรง) ให้กับรหัสสมาชิกในสัญญา Smart Contract'
+                : 'Directly modify the direct sponsor ID for a given user in the smart contract.'}
+            </p>
+
+            <form onSubmit={handleUpdateSponsorSubmit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-slate-300 block mb-1.5 font-bold">
+                    {lang === 'th' ? 'รหัสสมาชิก (User ID)' : 'User ID'}
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={updateSponsorUserId}
+                    onChange={(e) => setUpdateSponsorUserId(e.target.value)}
+                    placeholder="e.g. 5"
+                    className="w-full p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 text-xs font-mono text-white placeholder-slate-600 focus:outline-none focus:border-sky-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs text-slate-300 block mb-1.5 font-bold">
+                    {lang === 'th' ? 'ผู้แนะนำใหม่ (New Sponsor ID)' : 'New Sponsor ID'}
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={updateSponsorNewId}
+                    onChange={(e) => setUpdateSponsorNewId(e.target.value)}
+                    placeholder="1"
+                    className="w-full p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 text-xs font-mono text-white placeholder-slate-600 focus:outline-none focus:border-sky-500"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isUpdatingSponsor || txPending || !updateSponsorUserId || !updateSponsorNewId}
+                className="w-full py-3 rounded-2xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition disabled:opacity-50 shadow-lg shadow-sky-950/40"
+              >
+                {isUpdatingSponsor ? <Loader2 className="w-4 h-4 animate-spin" /> : <GitFork className="w-4 h-4" />}
+                <span>{lang === 'th' ? `ยืนยันย้ายผู้แนะนำ Sponsor #${updateSponsorUserId || '?'} -> #${updateSponsorNewId || '?'}` : `Update Sponsor #${updateSponsorUserId || '?'} -> #${updateSponsorNewId || '?'}`}</span>
               </button>
             </form>
           </div>
